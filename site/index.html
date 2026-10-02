@@ -1,1 +1,799 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한강 구역별 낚시 환경 대시보드</title>
+<style>
+        /* 기본 리셋 및 폰트 설정 */
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-dark: #1e40af;
+            --border-light: #e2e8f0;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --warning: #f59e0b;
+            --info: #0ea5e9;
+            --info-bg: #f0f9ff;
+            --ai-gradient: linear-gradient(135deg, #a855f7, #6366f1);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
 
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+            line-height: 1.5;
+            color: var(--text-main);
+            background-color: var(--bg-body);
+            margin: 0;
+            padding: 20px 10px;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        h1 {
+            text-align: center; font-size: 1.6rem; font-weight: 800; color: var(--text-main);
+            margin-bottom: 25px; letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 1.15rem; font-weight: 700; color: var(--text-main);
+            margin: 30px 0 15px 0; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* 공통 카드 스타일 */
+        .card {
+            background-color: var(--bg-card); border-radius: var(--radius-lg); padding: 24px;
+            box-shadow: var(--shadow-md); border: 1px solid rgba(226, 232, 240, 0.8); margin-bottom: 20px;
+        }
+
+        /* 모던 탭 스타일 */
+        .tab-menu {
+            display: flex; background-color: #e2e8f0; padding: 6px; border-radius: 14px; margin-bottom: 20px; gap: 4px;
+        }
+        .tab-button {
+            flex: 1; background-color: transparent; border: none; padding: 12px 0; font-size: 15px; font-weight: 600;
+            color: var(--text-muted); border-radius: 10px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .tab-button:hover { color: var(--text-main); }
+        .tab-button.active { background-color: var(--bg-card); color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+
+        /* 지도 스타일 */
+        .map-card { padding: 16px 20px 24px 20px; }
+        .map-title { font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .map-container { position: relative; width: 100%; padding-bottom: 45%; background-color: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border-light); overflow: hidden; }
+        .map-river-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .map-marker { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; transition: all 0.3s ease; }
+        .marker-dot { width: 16px; height: 16px; background-color: var(--primary); border-radius: 50%; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.3s ease, transform 0.2s; border: 2px solid white; }
+        .map-marker:hover .marker-dot { transform: scale(1.2); }
+        .marker-label { margin-top: 6px; font-size: 0.8rem; font-weight: 700; color: var(--text-main); background-color: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: 1px solid var(--border-light); }
+        .map-marker.active { z-index: 30; }
+        .map-marker.active .marker-dot { background-color: var(--danger); border-color: #fff; }
+        .map-marker.active .marker-label { color: var(--danger); border-color: var(--danger); background-color: #fff; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2); transform: translateY(-2px); }
+        .map-marker.active .marker-dot::after { content: ''; position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px; border-radius: 50%; border: 2px solid var(--danger); animation: pulse-ring 1.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1); }
+        @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; border-width: 3px; } 100% { transform: scale(2.5); opacity: 0; border-width: 1px; } }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 실시간 위젯 스타일 */
+        .dashboard-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+        .dash-card { background-color: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); display: flex; flex-direction: column; justify-content: center; color: white; }
+        
+        /* 수위 배너 가로 모드 */
+        .dash-card.level { background: linear-gradient(135deg, #3b82f6, #1d4ed8); flex-direction: row; align-items: center; justify-content: space-between; padding: 24px; }
+        .level-left { flex: 1; }
+        .level-right { text-align: right; }
+        .level-right .dash-diff { margin-top: 0; font-size: 1rem; }
+        .level-right .dash-update { margin-top: 6px; }
+
+        /* 날씨/풍속 통합 카드 */
+        .dash-card.weather-forecast { background: linear-gradient(135deg, #0ea5e9, #0284c7); padding: 24px; }
+        .forecast-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+        .forecast-current-right { text-align: right; }
+
+        .dash-title { font-size: 0.85rem; color: rgba(255, 255, 255, 0.9); font-weight: 600; margin-bottom: 6px; }
+        .dash-value { font-size: 1.8rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px; }
+        .dash-unit { font-size: 0.9rem; font-weight: 600; margin-left: 2px; opacity: 0.9; }
+        .dash-diff { font-size: 0.85rem; font-weight: 600; margin-top: 8px; }
+        
+        /* 타임라인(시간대별 예보) 스타일 */
+        .timeline-container { display: flex; gap: 10px; margin-top: 15px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.4) transparent; }
+        .timeline-container::-webkit-scrollbar { height: 6px; }
+        .timeline-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 4px; }
+        
+        .timeline-item { flex: 1; min-width: 65px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: background 0.2s; }
+        .timeline-item.current { background: rgba(255, 255, 255, 0.25); border: 1px solid rgba(255, 255, 255, 0.5); font-weight: bold; }
+        .timeline-time { font-size: 0.75rem; opacity: 0.9; }
+        .timeline-icon { font-size: 1.3rem; margin: 2px 0; }
+        .timeline-temp { font-size: 0.9rem; font-weight: 700; }
+        .timeline-wind { font-size: 0.75rem; opacity: 0.85; background: rgba(0,0,0,0.15); padding: 2px 6px; border-radius: 10px;}
+
+        .diff-up { color: #fca5a5; }
+        .diff-down { color: #93c5fd; }
+        .text-good { color: #86efac; }
+        .text-bad { color: #fca5a5; }
+        .text-normal { color: #fef08a; }
+        .dash-update { font-size: 0.7rem; color: rgba(255, 255, 255, 0.7); margin-top: 12px; }
+
+        /* AI 어드바이저 카드 스타일 */
+        .ai-card {
+            border: 2px solid transparent;
+            background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box, 
+                        var(--ai-gradient) border-box;
+            position: relative;
+        }
+        .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .ai-title { font-weight: 800; font-size: 1.1rem; color: #4f46e5; display: flex; align-items: center; gap: 8px; }
+        .btn-ai {
+            background: var(--ai-gradient); color: white; border: none; padding: 8px 16px; border-radius: 8px;
+            font-weight: 700; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; gap: 5px; font-size: 0.9rem;
+        }
+        .btn-ai:hover { opacity: 0.9; }
+        .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
+        .ai-content {
+            background: #f8fafc; border-radius: 8px; padding: 15px; font-size: 0.95rem; color: var(--text-main);
+            min-height: 60px; line-height: 1.6;
+        }
+
+        @media (max-width: 600px) {
+            .dash-card { padding: 16px; }
+            .dash-card.level { flex-direction: column; align-items: flex-start; }
+            .level-right { text-align: left; margin-top: 12px; }
+            .level-right .dash-diff { margin-top: 0; }
+            .dash-title { font-size: 0.75rem; }
+            .dash-value { font-size: 1.5rem; }
+            .dash-diff { font-size: 0.75rem; }
+            .map-container { padding-bottom: 60%; } 
+            .tab-button { font-size: 13px; padding: 10px 0; }
+        }
+
+        /* 그래프 및 테이블 영역 스타일 */
+        .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .chart-title { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+        .trend-badge { font-size: 0.75rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; }
+        .trend-badge.up { background-color: var(--danger-bg); color: var(--danger); }
+        .trend-badge.down { background-color: var(--info-bg); color: var(--info); }
+        .chart-container { position: relative; height: 220px; width: 100%; }
+        
+        .table-header-area { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+        .today-date { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 500px; }
+        th, td { padding: 14px 16px; text-align: left; font-size: 0.95rem; border-bottom: 1px solid var(--border-light); }
+        th { background-color: #f8fafc; color: var(--text-muted); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
+        th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+        td { color: var(--text-main); }
+        .highlight { color: var(--primary-dark); font-weight: 800; font-size: 1.05em; }
+        .next-day { font-size: 0.75em; color: var(--text-muted); margin-left: 4px; font-weight: normal; }
+
+        /* 팁 박스 */
+        .tip-box { background-color: var(--info-bg); border-left: 4px solid var(--info); padding: 20px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin-top: 24px; }
+        .tip-box h3 { color: var(--info); font-size: 1rem; font-weight: 700; margin: 0 0 12px 0; display: flex; align-items: center; gap: 6px; }
+        .tip-box ul { margin: 0; padding-left: 20px; color: #334155; font-size: 0.95rem; }
+        .tip-box li { margin-bottom: 8px; }
+        .api-notice { font-size: 0.8rem; color: var(--text-muted); text-align: right; margin-top: 12px; }
+        .api-status { font-size: 0.75rem; color: #10b981; font-weight: bold; padding: 2px 6px; background: #d1fae5; border-radius: 4px; display: inline-block; margin-bottom: 5px; }
+    * { box-sizing: border-box; }
+.toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.settings { border-top:4px solid #d97706; }
+.settings label { display:block; margin:12px 0 5px; font-weight:600; }
+.settings input,.settings select { display:block; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:5px; font:inherit; }
+.settings button,#refresh { padding:9px 14px; border:0; border-radius:8px; cursor:pointer; background:#1d4ed8; color:white; font:inherit; }
+button:disabled { cursor:not-allowed; opacity:.6; }
+summary { cursor:pointer; font-weight:700; }
+.small { font-size:.82rem; color:#475569; }
+.notice { background:#fffaf0; border-color:#fcd34d; font-size:.9rem; }
+.notice p { margin:8px 0; }
+a { color:#1d4ed8; }
+.api-status { background:#fff3cd; color:#854d0e; }
+.api-status.live { background:#dcfce7; color:#166534; }
+.trend-badge.flat { background:#f1f5f9; color:#475569; }
+.water-chart { height:100%; width:100%; display:flex; align-items:center; justify-content:center; color:#64748b; }
+.water-chart svg { width:100%; height:100%; }
+.ai-content { white-space:pre-wrap; overflow-wrap:anywhere; }
+.map-marker { transform:translate(-50%,-10px); }
+.map-marker:focus-visible { outline:3px solid #1d4ed8; outline-offset:5px; }
+.api-notice { text-align:left; }
+@media(max-width:600px) { .card { padding:16px; } .ai-header { align-items:flex-start; flex-direction:column; gap:12px; } .marker-label { font-size:.65rem; padding:2px 4px; } .trend-badge { max-width:48%; } }
+@media(prefers-reduced-motion:reduce) { *,*::after { animation:none !important; transition:none !important; } }
+
+    /* Mobile refinement of the original blue and white HTML. */
+body{font-size:16px;padding:18px 12px 32px}
+.container{max-width:760px}
+h1{font-size:24px;margin:8px 0 16px}
+.connection-bar{font-size:12px;color:#475569;margin:0 0 12px;gap:8px}
+#refresh{min-height:44px;font-size:14px}
+.tab-menu{position:sticky;top:0;z-index:50;margin-bottom:12px}
+.tab-button{min-height:44px;font-size:14px}
+.card{margin-bottom:12px;padding:18px;box-shadow:var(--shadow-sm)}
+.map-card{padding:14px}
+.map-title{font-size:16px}
+.map-container{padding-bottom:52%}
+.map-river-svg text{font-weight:500}
+.map-marker{min-width:44px;min-height:44px;transform:translate(-50%,-8px)}
+.marker-label{font-size:14px;padding:2px 6px}
+#marker_mangwon .marker-label{order:-1;margin:0 0 6px}
+#marker_mangwon{transform:translate(-50%,-40px)}
+#marker_yanghwa .marker-label{margin-top:12px}
+.map-marker.active .marker-dot::after{animation:none;border-color:rgba(239,68,68,.3)}
+.map-help{font-size:14px;color:#475569;margin:0 2px 18px}
+.map-help summary{min-height:32px;font-weight:500}
+.map-help p{margin:8px 0}
+.chart-title{font-size:16px}
+.chart-container{height:175px}
+.chart-header{gap:8px;margin-bottom:10px}
+.water-chart{background:linear-gradient(0deg,#f8fafc,#fff);border-radius:8px;font-size:14px}
+.trend-badge{font-size:12px;padding:5px 9px;white-space:nowrap}
+.dashboard-grid{gap:12px;margin-bottom:16px}
+.dash-card.level,.dash-card.weather-forecast{padding:18px}
+.dash-card.level{flex-direction:row;gap:12px;align-items:center}
+.level-right{max-width:52%;margin:0;text-align:right}
+.dash-title,.dash-diff{font-size:14px}
+.dash-value{font-size:28px}
+.dash-update{font-size:12px;color:rgba(255,255,255,.92);overflow-wrap:anywhere}
+.level-right .dash-diff{font-size:12px}
+.api-status{font-size:12px}
+.timeline-item{min-width:72px}
+.timeline-time,.timeline-wind{font-size:12px}
+.timeline-icon{font-size:14px!important}
+.today-date{font-size:14px;font-weight:500}
+table{min-width:0;width:100%;table-layout:fixed}
+th,td{padding:12px 6px;font-size:14px;overflow-wrap:anywhere}
+th{font-size:14px}
+td small{font-size:12px}
+.api-notice{font-size:12px}
+h2{font-size:18px;margin:20px 0 10px!important}
+.ai-header{gap:12px;margin-bottom:10px}
+.ai-title{font-size:16px}
+.btn-ai{min-height:44px;font-size:14px}
+.ai-content{font-size:14px;min-height:0;padding:12px}
+@media(max-width:420px){h1{font-size:22px}.card{padding:14px}.map-card{padding:12px}.dash-card.level{flex-direction:column;align-items:flex-start}.level-right{max-width:100%;text-align:left}.chart-header{align-items:flex-start}.marker-label{font-size:14px}.small{font-size:12px}}
+
+</style>
+<meta name="theme-color" content="#2563eb"><link rel="icon" href="./favicon.svg"></head>
+<body>
+    <div class="container">
+        <h1>🎣 한강 낚시 대시보드</h1>
+
+        <div class="toolbar connection-bar"><span id="global-status" role="status">공식 자료 자동 갱신 · 항목별 관측 시각 확인</span><button id="refresh" type="button">새로고침</button></div>
+
+
+<!-- 탭 메뉴 -->
+        <p class="small">자료는 약 15분 간격으로 갱신을 시도합니다. 지연될 수 있으며, 새로고침은 마지막 게시 자료를 불러옵니다.</p><div class="tab-menu">
+            <button class="tab-button active" onclick="openTab(event, 'ttukseom')">뚝섬</button>
+            <button class="tab-button" onclick="openTab(event, 'yanghwa')">양화</button>
+            <button class="tab-button" onclick="openTab(event, 'mangwon')">망원</button>
+            <button class="tab-button" onclick="openTab(event, 'banpo')">반포</button>
+        </div>
+
+        <!-- 🗺️ 한강 포인트 금지구역 상세 지도 -->
+        <div class="card map-card">
+            <div class="map-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-5.447a8 8 0 0111.314-11.314L20 9m-11 11v-9m0 9l5.447-5.447a8 8 0 00-11.314 0L9 20z"></path></svg>
+                한강 구역 선택 · 위치 개략도
+            </div>
+            <div class="map-container">
+                <svg class="map-river-svg" viewBox="0 0 1000 450" preserveAspectRatio="none">
+                    <defs>
+                        <pattern id="forbidden-pattern" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                            <line x1="0" y1="0" x2="0" y2="12" stroke="#ef4444" stroke-width="4" opacity="0.6" />
+                        </pattern>
+                    </defs>
+                    <path d="M 1100,100 C 950,100 850,220 700,220 C 550,220 500,320 400,320 C 280,320 250,200 150,200 C 50,200 0,150 -50,150" fill="none" stroke="#e0f2fe" stroke-width="140" stroke-linecap="round" />
+                    <path d="M 1100,100 C 950,100 850,220 700,220 C 550,220 500,320 400,320 C 280,320 250,200 150,200 C 50,200 0,150 -50,150" fill="none" stroke="#bae6fd" stroke-width="100" stroke-linecap="round" />
+                    
+                    <ellipse cx="280" cy="240" rx="80" ry="25" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" />
+                    <text x="280" y="244" font-size="32" fill="#94a3b8" font-weight="bold" text-anchor="middle">여의도</text>
+
+                    <!-- 대교 -->
+                    <line x1="100" y1="120" x2="100" y2="260" stroke="#cbd5e1" stroke-width="4"/>
+                    <line x1="180" y1="130" x2="180" y2="280" stroke="#cbd5e1" stroke-width="4"/><text x="180" y="120" font-size="32" fill="#64748b" text-anchor="middle">양화대교</text>
+                    <line x1="430" y1="250" x2="430" y2="390" stroke="#cbd5e1" stroke-width="4"/><text x="430" y="240" font-size="32" fill="#64748b" text-anchor="middle">반포대교</text>
+                    <line x1="680" y1="150" x2="680" y2="290" stroke="#cbd5e1" stroke-width="4"/><text x="680" y="140" font-size="32" fill="#64748b" text-anchor="middle">동호대교</text>
+                    <line x1="850" y1="100" x2="850" y2="240" stroke="#cbd5e1" stroke-width="4"/><text x="850" y="90" font-size="32" fill="#64748b" text-anchor="middle">청담대교</text>
+
+                </svg>
+
+                <div role="button" tabindex="0" class="map-marker" id="marker_mangwon" style="left: 13%; top: 40%;"><div class="marker-dot"></div><div class="marker-label">망원</div></div>
+                <div role="button" tabindex="0" class="map-marker" id="marker_yanghwa" style="left: 20%; top: 49%;"><div class="marker-dot"></div><div class="marker-label">양화</div></div>
+                <div role="button" tabindex="0" class="map-marker" id="marker_banpo" style="left: 43%; top: 73%;"><div class="marker-dot"></div><div class="marker-label">반포</div></div>
+                <div role="button" tabindex="0" class="map-marker active" id="marker_ttukseom" style="left: 83%; top: 33%;"><div class="marker-dot"></div><div class="marker-label">뚝섬</div></div>
+            </div>
+        </div>
+
+        <details class="map-help"><summary>지도 안내 · 낚시금지구역 확인</summary><strong>낚시구역은 공식 안내에서 확인하세요.</strong><p>위 그림은 구역 선택용 개략도이며 실제 좌표·금지구역 경계·현재 위치를 나타내지 않습니다. 서울시 안내에는 선유도공원 전체와 뚝섬·망원·반포의 일부 구간 등이 금지구역으로 기재되어 있습니다. 공원 이름만으로 낚시 가능 여부를 판단할 수 없습니다.</p><a href="https://hangang.seoul.go.kr/files/2016/12/58461c89b5f2b9.43689767.pdf" target="_blank" rel="noopener">서울시 금지구역 안내도</a> · <a href="https://hangang.seoul.go.kr/www/contents/646.do?mid=427" target="_blank" rel="noopener">한강공원 공식 이용 규정</a><p class="small">자료 확인: 2026-09-30. 최신 고시와 현장 안내판, 공원 안내센터에서 해당 지점을 다시 확인하세요.</p></details>
+<!-- ==================== 뚝섬 탭 ==================== -->
+        <div id="ttukseom" class="tab-content active">
+            
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="chart-header">
+                    <div class="chart-title">최근 6시간 수위</div>
+                    <span class="trend-badge" id="trend_ttukseom">데이터 로딩 중...</span>
+                </div>
+                <div class="chart-container">
+                    <div id="chart_ttukseom" class="water-chart" role="img" aria-label="수위 추이"></div>
+                </div>
+            </div>
+
+            <!-- 실시간 위젯 그룹 -->
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">청담대교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_ttukseom">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_ttukseom">분석 중...</div>
+                        <div class="dash-update" id="time_level_ttukseom">업데이트 중...</div>
+                    </div>
+                </div>
+                
+                <div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 초단기 실황 · 예보</div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_ttukseom">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_ttukseom">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_ttukseom">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_ttukseom">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_ttukseom"></div>
+                    <div class="dash-update" id="time_weather_ttukseom" style="text-align:right;">업데이트 중...</div>
+                </div>
+            </div>
+
+            <!-- 인천 조석 참고 -->
+            <h2 style="margin-top: 30px;">인천 조석 참고</h2>
+            <div class="card">
+                <div class="table-header-area">
+                    <div class="today-date" id="date_ttukseom">YYYY. MM. DD. 물때</div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>구분</th>
+                                <th>시각</th>
+                                <th>조위</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tide_ttukseom"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 예보 기준 · 한강 도착 시각으로 환산하지 않습니다.</div>
+            </div>
+
+            <!-- AI 낚시 조언가 카드 -->
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🤖 AI 낚시 어드바이저</div>
+                    <button class="btn-ai" onclick="getAIAdvice('ttukseom')" id="btn_ai_ttukseom">✨ AI 출조 전략 받기</button>
+                </div>
+                <div class="ai-content" id="ai_result_ttukseom">
+                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== 양화 탭 ==================== -->
+        <div id="yanghwa" class="tab-content">
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="chart-header">
+                    <div class="chart-title">최근 6시간 수위</div>
+                    <span class="trend-badge" id="trend_yanghwa">데이터 로딩 중...</span>
+                </div>
+                <div class="chart-container"><div id="chart_yanghwa" class="water-chart" role="img" aria-label="수위 추이"></div></div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">한강대교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_yanghwa">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_yanghwa">분석 중...</div>
+                        <div class="dash-update" id="time_level_yanghwa">업데이트 중...</div>
+                    </div>
+                </div>
+                
+                <div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 초단기 실황 · 예보</div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_yanghwa">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_yanghwa">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_yanghwa">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_yanghwa">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_yanghwa"></div>
+                    <div class="dash-update" id="time_weather_yanghwa" style="text-align:right;">업데이트 중...</div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 30px;">인천 조석 참고</h2>
+            <div class="card">
+                <div class="table-header-area">
+                    <div class="today-date" id="date_yanghwa">YYYY. MM. DD. 물때</div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>구분</th><th>시각</th><th>조위</th><th>상태</th></tr>
+                        </thead>
+                        <tbody id="tide_yanghwa"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 예보 기준 · 한강 도착 시각으로 환산하지 않습니다.</div>
+            </div>
+
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🤖 AI 낚시 어드바이저</div>
+                    <button class="btn-ai" onclick="getAIAdvice('yanghwa')" id="btn_ai_yanghwa">✨ AI 출조 전략 받기</button>
+                </div>
+                <div class="ai-content" id="ai_result_yanghwa">
+                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== 망원 탭 ==================== -->
+        <div id="mangwon" class="tab-content">
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="chart-header">
+                    <div class="chart-title">최근 6시간 수위</div>
+                    <span class="trend-badge" id="trend_mangwon">데이터 로딩 중...</span>
+                </div>
+                <div class="chart-container"><div id="chart_mangwon" class="water-chart" role="img" aria-label="수위 추이"></div></div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">행주대교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_mangwon">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_mangwon">분석 중...</div>
+                        <div class="dash-update" id="time_level_mangwon">업데이트 중...</div>
+                    </div>
+                </div>
+                
+                <div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 초단기 실황 · 예보</div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_mangwon">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_mangwon">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_mangwon">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_mangwon">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_mangwon"></div>
+                    <div class="dash-update" id="time_weather_mangwon" style="text-align:right;">업데이트 중...</div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 30px;">인천 조석 참고</h2>
+            <div class="card">
+                <div class="table-header-area"><div class="today-date" id="date_mangwon">YYYY. MM. DD. 물때</div></div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>구분</th><th>시각</th><th>조위</th><th>상태</th></tr></thead>
+                        <tbody id="tide_mangwon"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 예보 기준 · 한강 도착 시각으로 환산하지 않습니다.</div>
+            </div>
+
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🤖 AI 낚시 어드바이저</div>
+                    <button class="btn-ai" onclick="getAIAdvice('mangwon')" id="btn_ai_mangwon">✨ AI 출조 전략 받기</button>
+                </div>
+                <div class="ai-content" id="ai_result_mangwon">
+                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 반포 탭 ==================== -->
+        <div id="banpo" class="tab-content">
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="chart-header">
+                    <div class="chart-title">최근 6시간 수위</div>
+                    <span class="trend-badge" id="trend_banpo">데이터 로딩 중...</span>
+                </div>
+                <div class="chart-container"><div id="chart_banpo" class="water-chart" role="img" aria-label="수위 추이"></div></div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">잠수교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_banpo">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_banpo">분석 중...</div>
+                        <div class="dash-update" id="time_level_banpo">업데이트 중...</div>
+                    </div>
+                </div>
+                
+                <div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 초단기 실황 · 예보</div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_banpo">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_banpo">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_banpo">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_banpo">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_banpo"></div>
+                    <div class="dash-update" id="time_weather_banpo" style="text-align:right;">업데이트 중...</div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 30px;">인천 조석 참고</h2>
+            <div class="card">
+                <div class="table-header-area"><div class="today-date" id="date_banpo">YYYY. MM. DD. 물때</div></div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>구분</th><th>시각</th><th>조위</th><th>상태</th></tr></thead>
+                        <tbody id="tide_banpo"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 예보 기준 · 한강 도착 시각으로 환산하지 않습니다.</div>
+            </div>
+
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🤖 AI 낚시 어드바이저</div>
+                    <button class="btn-ai" onclick="getAIAdvice('banpo')" id="btn_ai_banpo">✨ AI 출조 전략 받기</button>
+                </div>
+                <div class="ai-content" id="ai_result_banpo">
+                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+async function serverData(kind,zone='',method='GET') {
+ if(location.protocol==='file:') throw new Error('GitHub Pages 게시 후 자료를 조회할 수 있습니다');
+ if(method!=='GET'||!['weather','tides'].includes(kind))throw new Error('현재 연결을 준비 중인 기능입니다');
+ const file=kind==='weather'?'weather-'+zone+'.json':'tides.json';
+ const response=await fetch('./data/'+file+'?v='+Math.floor(Date.now()/60000),{cache:'no-store',signal:AbortSignal.timeout(15000)});
+ if(!response.ok)throw new Error('게시된 자료를 조회하지 못했습니다');
+ const payload=await response.json();
+ if(payload.error)throw new Error(payload.error);
+ if(kind==='tides'&&payload.data.day!==kst().slice(0,8))throw new Error('오늘 조석 자료 갱신 대기');
+ if(kind==='weather'&&Date.now()-parseStamp(payload.data.time)>2*3600000)throw new Error('기상 자료가 2시간 이상 지났습니다 · 갱신 대기');
+ return payload.data;
+}
+'use strict';
+const zones = {
+  ttukseom: { name:'뚝섬', station:'청담대교', nx:62, ny:126, sample:1.2 },
+  yanghwa: { name:'양화/선유도', station:'한강대교', nx:58, ny:126, sample:1.5 },
+  mangwon: { name:'망원', station:'행주대교', nx:58, ny:127, sample:1.6 },
+  banpo: { name:'반포', station:'잠수교', nx:60, ny:125, sample:1.8 }
+};
+let config = { mode:'live', gemini:true, model:'gemini-2.5-flash' };
+let activeZone='ttukseom', generation=0, stationPromise=null;
+let tideCache=null;
+const states={}, pending={};
+const $ = id => document.getElementById(id);
+const text = (id, value) => { $(id).textContent=value; };
+const escapeHTML = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function kst(date=new Date()) { return new Date(date.getTime()+9*3600000).toISOString().slice(0,16).replace(/[-T:]/g,''); }
+function stamp(s) { return `${s.slice(4,6)}/${s.slice(6,8)} ${s.slice(8,10)}:${s.slice(10,12)} KST`; }
+function parseStamp(s) {
+  if(!/^\d{12}$/.test(s)) return NaN;
+  const date = new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(8,10)}:${s.slice(10,12)}:00+09:00`);
+  return Number.isFinite(+date) && kst(date)===s ? +date : NaN;
+}
+function numeric(v) { return v!==null && v!==undefined && String(v).trim()!=='' && Number.isFinite(Number(v)); }
+function decodeKey(key) { try { return decodeURIComponent(key.trim()); } catch { return key.trim(); } }
+function reason(e) {
+  if(e.name==='AbortError') return '응답 시간 초과';
+  if(e instanceof TypeError) return '연결 실패 · 네트워크 또는 브라우저 접근 제한(CORS)을 확인하세요';
+  return e.message || '데이터 조회 실패';
+}
+async function fetchJSON(url, options={}) {
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  try {
+    const r=await fetch(url,{...options,signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+    if(!r.ok) throw new Error(`API 오류 (HTTP ${r.status})`);
+    try { return await r.json(); } catch { throw new Error('JSON 응답이 아닙니다 · 인증키와 서비스 승인을 확인하세요'); }
+  } finally { clearTimeout(timeout); }
+}
+function openTab(evt, zone) {
+  if(!zones[zone]) return;
+  activeZone=zone;
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.toggle('active',e.id===zone));
+  document.querySelectorAll('.tab-button').forEach(e=>{const selected=e.getAttribute('onclick').includes(zone);e.classList.toggle('active',selected);e.setAttribute('aria-pressed',selected);});
+  document.querySelectorAll('.map-marker').forEach(e=>e.classList.toggle('active',e.id===`marker_${zone}`));
+  if(!states[zone] || Date.now()-states[zone].loaded>300000) loadZoneData(zone);
+  else updateAI(zone);
+}
+function normalWater(rows, now=Date.now()) {
+  if(!Array.isArray(rows)) throw new Error('수위 응답 형식 오류');
+  const byTime=new Map();
+  for(const row of rows) {
+    const s=String(row.ymdhm??''); const t=parseStamp(s);
+    if(Number.isFinite(t) && t<=now+60000 && t>=now-6*3600000 && numeric(row.wl) && Number(row.wl)>-90) byTime.set(s,{time:s,value:Number(row.wl)});
+  }
+  const out=[...byTime.values()].sort((a,b)=>a.time.localeCompare(b.time));
+  if(!out.length) throw new Error('최근 6시간의 유효한 수위 관측값이 없습니다');
+  return out;
+}
+function trend(values) {
+  if(values.length<2) return {label:'비교 자료 부족',cls:'flat'};
+  const diff=Math.round((values.at(-1)-values[0])*100)/100;
+  return {label:diff===0?'— 변화 없음':`${diff>0?'▲ 상승':'▼ 하강'} ${Math.abs(diff).toFixed(2)}m`,cls:diff===0?'flat':diff>0?'up':'down'};
+}
+function waterSummary(rows) {
+  const last=rows.at(-1),target=parseStamp(last.time)-3600000;
+  const before=rows.filter(r=>r!==last&&Math.abs(parseStamp(r.time)-target)<=5*60000).sort((a,b)=>Math.abs(parseStamp(a.time)-target)-Math.abs(parseStamp(b.time)-target))[0];
+  const change=before?Math.round((last.value-before.value)*100):null;
+  const recent=change===null?'1시간 변화: 비교 자료 부족':`약 1시간 변화: ${change>0?'+':''}${change} cm`;
+  const values=rows.map(r=>r.value);
+  return `${recent} · 조회 구간 ${Math.min(...values).toFixed(2)}~${Math.max(...values).toFixed(2)} m`;
+}
+async function waterData(){throw new Error('수위 API 규격 확인 및 연결 대기');}
+function renderChart(zone, rows, demo) {
+  if(!rows.length) { text(`chart_${zone}`,'수위 연결 대기'); return; }
+  const values=rows.map(r=>r.value), min=Math.min(...values)-.1,max=Math.max(...values)+.1;
+  const firstTime=parseStamp(rows[0].time),span=Math.max(1,parseStamp(rows.at(-1).time)-firstTime);
+  const x=i=>55+(parseStamp(rows[i].time)-firstTime)*690/span, y=v=>165-(v-min)/(max-min)*135;
+  const points=rows.map((r,i)=>`${x(i)},${y(r.value)}`).join(' ');
+  const grid=[0,.5,1].map(t=>{const value=min+(max-min)*t, yy=y(value);return `<line x1="55" y1="${yy}" x2="745" y2="${yy}" stroke="#e2e8f0"/><text x="45" y="${yy+4}" text-anchor="end" fill="#64748b" font-size="12">${value.toFixed(2)}</text>`;}).join('');
+  const indices=[...new Set([0,Math.floor((rows.length-1)/2),rows.length-1])];
+  const labels=indices.map(i=>`<text x="${x(i)}" y="192" text-anchor="middle" fill="#64748b" font-size="12">${rows[i].time.slice(8,10)}:${rows[i].time.slice(10,12)}</text>`).join('');
+  $(`chart_${zone}`).innerHTML=`<svg viewBox="0 0 800 210" role="img" aria-label="${demo?'예시':'관측'} 수위 그래프, 단위 미터"><text x="55" y="16" fill="#64748b" font-size="12">${demo?'예시 데이터':'관측 수위'} · m</text>${grid}<polyline points="${points}" fill="none" stroke="#2563eb" stroke-width="3"/>${rows.length===1?`<circle cx="55" cy="${y(rows[0].value)}" r="4" fill="#2563eb"/>`:''}${labels}</svg>`;
+}
+function renderWater(zone,data,error) {
+  const badge=document.querySelector(`#${zone} .api-status`);
+  badge.className='api-status'+(data&&!data.demo&&!data.stale?' live':'');
+  if(!data) {
+    document.querySelector(`#${zone} .level-left .dash-title`).textContent=`${zones[zone].station} 참고 관측소`;
+    badge.textContent='수위 미연결'; text(`val_level_${zone}`,'— m');text(`diff_level_${zone}`,'비교 자료 없음');text(`time_level_${zone}`,reason(error));text(`trend_${zone}`,'자료 없음');$(`trend_${zone}`).className='trend-badge flat';renderChart(zone,[],false);return;
+  }
+  const last=data.rows.at(-1), t=trend(data.rows.map(r=>r.value));
+  badge.textContent=data.demo?'예시 · 실제 관측값 아님':data.stale?'HRFCO · 오래된 관측':'HRFCO · 관측 데이터';
+  document.querySelector(`#${zone} .level-left .dash-title`).textContent=`${data.station} 수위${data.demo?'': ' (참고 관측소)'}`;
+  text(`val_level_${zone}`,`${last.value.toFixed(2)} m`);
+  text(`diff_level_${zone}`,`${data.demo?'예시 · ':''}${waterSummary(data.rows)}`);
+  text(`time_level_${zone}`,`${data.demo?'가상 시각':'관측 시각'}: ${stamp(last.time)}${data.stale?' · 1시간 이상 경과':''}`);
+  text(`trend_${zone}`,`${data.demo?'예시 · ':''}${t.label}`);$(`trend_${zone}`).className=`trend-badge ${t.cls}`;
+  renderChart(zone,data.rows,data.demo);
+}
+function weatherBase(now,forecast) {
+  // 실황은 매시 10분 이후, 초단기예보는 매시 45분 이후 조회. 5분 여유를 둔다.
+  const lag=forecast?50:15;
+  const s=kst(new Date(now-lag*60000));
+  return {base_date:s.slice(0,8),base_time:s.slice(8,10)+(forecast?'30':'00')};
+}
+function weatherItems(json) {
+  const r=json?.response;
+  if(String(r?.header?.resultCode)!=='00') throw new Error(`기상청 응답 오류 (${String(r?.header?.resultCode??'형식 확인').slice(0,10)})`);
+  const items=r?.body?.items?.item;
+  if(!Array.isArray(items)||!items.length) throw new Error('기상청 자료가 없습니다');
+  return items;
+}
+function weatherLabel(pty,sky) {
+  const rain={1:'비 🌧️',2:'비/눈 🌨️',3:'눈 ❄️',4:'소나기 🌦️',5:'빗방울',6:'빗방울/눈날림',7:'눈날림'};
+  return rain[pty] || ({1:'맑음 ☀️',3:'구름많음 ☁️',4:'흐림 ☁️'}[sky]) || (pty===0?'강수 없음':'강수 정보 없음');
+}
+function windDirection(value) {
+  if(!numeric(value)||Number(value)<0||Number(value)>360) return '풍향 자료 없음';
+  const names=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
+  return names[Math.round(Number(value)/22.5)%16]+'풍';
+}
+function rainLabel(value) {
+  if(value===undefined||value===null||String(value).trim()===''||String(value).startsWith('-')) return '강수량 자료 없음';
+  if(numeric(value)) return Number(value).toFixed(1)+' mm';
+  const label=String(value).trim();
+  return /^(강수없음|[\d.]+\s*mm(\s*(미만|이상))?|[\d.]+\s*[~～]\s*[\d.]+\s*mm)$/.test(label)?label:'강수량 자료 없음';
+}
+async function weatherData(zone){return serverData('weather',zone);}
+function renderWeather(zone,data,error) {
+  if(!data) {text(`val_weather_${zone}`,'— °C');text(`val_wind_${zone}`,'— m/s');text(`desc_weather_${zone}`,'날씨 미연결');text(`desc_wind_${zone}`,'자료 없음');text(`time_weather_${zone}`,reason(error));text(`timeline_weather_${zone}`,'예보 없음');return;}
+  text(`val_weather_${zone}`,`${data.temp.toFixed(1)} °C`);text(`val_wind_${zone}`,`${data.wind.toFixed(1)} m/s`);text(`desc_weather_${zone}`,`${data.demo?'예시 · ':''}${data.desc} · 1시간 강수 ${data.rain||'자료 없음'}`);text(`desc_wind_${zone}`,data.demo?'가상 풍속':`${data.direction||'풍향 자료 없음'} · 격자 대표값`);
+  text(`time_weather_${zone}`,`${data.demo?'예시':'출처: 기상청 · 실황 기준'} ${stamp(data.time)} · 격자 ${zones[zone].nx},${zones[zone].ny}`);
+  $(`timeline_weather_${zone}`).innerHTML=data.forecast.map(r=>`<div class="timeline-item"><div class="timeline-time">${r.time.slice(4,6)}/${r.time.slice(6,8)} ${r.time.slice(8,10)}시</div><div class="timeline-time">${data.demo?'예시':'예보'}</div><div class="timeline-icon" style="font-size:.8rem">${escapeHTML(r.desc)}</div><div class="timeline-temp">${r.temp.toFixed(1)}°</div><div class="timeline-wind">${r.wind.toFixed(1)}m/s</div><div class="timeline-time">${escapeHTML(r.direction||'풍향 없음')}</div><div class="timeline-time">${escapeHTML(r.rain||'강수량 없음')}</div></div>`).join('');
+  if(data.forecastError) text(`timeline_weather_${zone}`,`실황 조회 완료 · 예보 미연결: ${data.forecastError}`);
+}
+function normalTides(json,day) {
+  if(String(json?.header?.resultCode)!=='00') throw new Error(`조석 API 응답 오류 (${String(json?.header?.resultCode??'형식 확인').slice(0,10)})`);
+  const items=json?.body?.items?.item;
+  const array=Array.isArray(items)?items:items?[items]:[];
+  const rows=[];
+  for(const r of array) {
+    const time=String(r.predcDt??'').replace(/[- :T]/g,'').slice(0,12),code=Number(r.extrSe);
+    if(r.obsvtrNm!=='인천'||!Number.isFinite(parseStamp(time))||time.slice(0,8)!==day||!numeric(r.predcTdlvVl)||![1,2,3,4].includes(code)) continue;
+    rows.push({time,height:Number(r.predcTdlvVl),type:[1,3].includes(code)?'만조':'간조'});
+  }
+  if(!rows.length || rows.length!==array.length) throw new Error('인천 조석 예보의 시각·높이·지점 정보를 확인할 수 없습니다');
+  return rows.sort((a,b)=>a.time.localeCompare(b.time));
+}
+async function tideData(){return serverData('tides');}
+function renderTide(zone,data,error) {
+  const day=data?.day||kst().slice(0,8);
+  text(`date_${zone}`,`${day.slice(0,4)}. ${day.slice(4,6)}. ${day.slice(6,8)}. · ${data?(data.demo?'예시 조석표':'출처: 국립해양조사원 · 인천 예보'):'조석 미연결'}`);
+  if(!data) {$(`tide_${zone}`).innerHTML=`<tr><td colspan="4">${escapeHTML(reason(error))}</td></tr>`;return;}
+  $(`tide_${zone}`).innerHTML=data.rows.map(r=>`<tr><td>${r.type}${data.demo?' (예시)':''}</td><td>${r.time.slice(8,10)}:${r.time.slice(10,12)}</td><td>${r.height.toFixed(0)} cm</td><td>${data.demo?'가상 데이터':r.time<kst()?'지난 시각':'예정'}</td></tr>`).join('');
+  const high=data.rows.filter(r=>r.type==='만조'),low=data.rows.filter(r=>r.type==='간조');
+  if(high.length&&low.length){const range=Math.max(...high.map(r=>r.height))-Math.min(...low.map(r=>r.height));$(`tide_${zone}`).innerHTML+=`<tr><td colspan="4">${data.demo?'예시 · ':''}하루 최고·최저 예측조위 차: <strong>${range.toFixed(0)} cm (${(range/100).toFixed(2)} m)</strong><br><small>인천 기준 조위입니다. 한강 현장 수위 변화량이 아닙니다.</small></td></tr>`;}
+}
+function updateAI(zone) {
+  const state=states[zone];
+  const ready=config.mode==='live'&&!!config.gemini&&!!config.model&&!!state?.water&&!!state?.weather&&!state.water.demo&&!state.weather.demo&&!state.water.stale&&Date.now()-parseStamp(state.water.rows.at(-1).time)<=3600000&&Date.now()-parseStamp(state.weather.time)<=2*3600000;
+  $(`btn_ai_${zone}`).disabled=!ready || !!state?.aiBusy;
+  $(`btn_ai_${zone}`).title=ready?'표시된 수위·날씨를 Google에 전송합니다':'최신 수위·날씨 연결 후 사용 가능합니다';
+  return ready;
+}
+async function loadZoneData(zone,force=false) {
+  if(pending[zone]===generation&&!force) return;
+  const gen=generation,cfg={...config}, token={};pending[zone]=gen;
+  const state={loaded:0,water:null,weather:null,token};states[zone]=state;
+  text(`ai_result_${zone}`,'수위 연결 후 AI 참고 조언을 사용할 수 있습니다.');updateAI(zone);
+  renderTide(zone,null,new Error('인천 조석 예보 조회 중…'));
+  renderWater(zone,null,new Error('수위 조회 중…'));renderWeather(zone,null,new Error('날씨 조회 중…'));
+  text(`chart_${zone}`,'수위 조회 중…');
+  const current=()=>gen===generation&&states[zone]?.token===token;
+  await Promise.all([
+    waterData(zone,cfg).then(data=>{if(current()){state.water=data;renderWater(zone,data);}},e=>{if(current())renderWater(zone,null,e);}),
+    weatherData(zone,cfg).then(data=>{if(current()){state.weather=data;renderWeather(zone,data);}},e=>{if(current())renderWeather(zone,null,e);}),
+    tideData(cfg).then(data=>{if(current()){state.tide=data;renderTide(zone,data);}},e=>{if(current())renderTide(zone,null,e);})
+  ]);
+  if(current()){state.loaded=Date.now();delete pending[zone];updateAI(zone);}
+}
+async function getAIAdvice(zone){if(!updateAI(zone))return;const state=states[zone];state.aiBusy=true;updateAI(zone);try {const data=await serverData('advice',zone,'POST');text('ai_result_'+zone,data.text);}catch(e){text('ai_result_'+zone,reason(e));}finally{state.aiBusy=false;updateAI(zone);}}
+function applySettings() {
+  generation++;stationPromise=null;tideCache=null;
+  for(const zone of Object.keys(zones)) {delete states[zone];delete pending[zone];$(`btn_ai_${zone}`).disabled=true;}
+  text('global-status',config.mode==='demo'?'예시 모드 · 실제 관측값이 아닙니다':'실제 API 모드 · 항목별 연결 상태를 확인하세요');
+  loadZoneData(activeZone);
+}
+document.querySelectorAll('.map-marker').forEach(marker=>{
+  const choose=()=>openTab(null,marker.id.replace('marker_',''));
+  marker.addEventListener('click',choose);marker.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});
+});
+$('refresh').addEventListener('click',async()=>{ $('refresh').disabled=true;try{await loadZoneData(activeZone,true);}finally{$('refresh').disabled=false;} });
+setInterval(()=>{if(!document.hidden){updateAI(activeZone);if(states[activeZone]&&Date.now()-states[activeZone].loaded>=300000)loadZoneData(activeZone);}},60000);
+openTab(null,'ttukseom');
+
+
+</script>
+</body>
+</html>
