@@ -384,7 +384,7 @@ h2{font-size:18px;margin:20px 0 10px!important}
                     <button class="btn-ai" onclick="getAIAdvice('ttukseom')" id="btn_ai_ttukseom">✨ AI 출조 전략 받기</button>
                 </div>
                 <div class="ai-content" id="ai_result_ttukseom">
-                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                    AI 어드바이저 서버 연결 준비 중입니다.
                 </div>
             </div>
 
@@ -452,7 +452,7 @@ h2{font-size:18px;margin:20px 0 10px!important}
                     <button class="btn-ai" onclick="getAIAdvice('yanghwa')" id="btn_ai_yanghwa">✨ AI 출조 전략 받기</button>
                 </div>
                 <div class="ai-content" id="ai_result_yanghwa">
-                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                    AI 어드바이저 서버 연결 준비 중입니다.
                 </div>
             </div>
 
@@ -516,7 +516,7 @@ h2{font-size:18px;margin:20px 0 10px!important}
                     <button class="btn-ai" onclick="getAIAdvice('mangwon')" id="btn_ai_mangwon">✨ AI 출조 전략 받기</button>
                 </div>
                 <div class="ai-content" id="ai_result_mangwon">
-                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                    AI 어드바이저 서버 연결 준비 중입니다.
                 </div>
             </div>
         </div>
@@ -579,7 +579,7 @@ h2{font-size:18px;margin:20px 0 10px!important}
                     <button class="btn-ai" onclick="getAIAdvice('banpo')" id="btn_ai_banpo">✨ AI 출조 전략 받기</button>
                 </div>
                 <div class="ai-content" id="ai_result_banpo">
-                    수위 연결 후 AI 참고 조언을 사용할 수 있습니다.
+                    AI 어드바이저 서버 연결 준비 중입니다.
                 </div>
             </div>
         </div>
@@ -589,12 +589,18 @@ h2{font-size:18px;margin:20px 0 10px!important}
     <script>
 async function serverData(kind,zone='',method='GET') {
  if(location.protocol==='file:') throw new Error('GitHub Pages 게시 후 자료를 조회할 수 있습니다');
- if(method!=='GET'||!['weather','tides'].includes(kind))throw new Error('현재 연결을 준비 중인 기능입니다');
- const file=kind==='weather'?'weather-'+zone+'.json':'tides.json';
+ if(method!=='GET'||!['water','weather','tides'].includes(kind))throw new Error('현재 연결을 준비 중인 기능입니다');
+ const file=kind==='tides'?'tides.json':kind+'-'+zone+'.json';
  const response=await fetch('./data/'+file+'?v='+Math.floor(Date.now()/60000),{cache:'no-store',signal:AbortSignal.timeout(15000)});
  if(!response.ok)throw new Error('게시된 자료를 조회하지 못했습니다');
  const payload=await response.json();
  if(payload.error)throw new Error(payload.error);
+ if(kind==='water') {
+   if(!Array.isArray(payload.data?.rows)||!payload.data.rows.length)throw new Error('유효한 수위 자료 없음');
+   const age=Date.now()-parseStamp(payload.data.rows.at(-1).time);
+   if(!Number.isFinite(age)||age>6*3600000||age< -60000)throw new Error('수위 자료 갱신 대기');
+   payload.data.stale=age>3600000;
+ }
  if(kind==='tides'&&payload.data.day!==kst().slice(0,8))throw new Error('오늘 조석 자료 갱신 대기');
  if(kind==='weather'&&Date.now()-parseStamp(payload.data.time)>2*3600000)throw new Error('기상 자료가 2시간 이상 지났습니다 · 갱신 대기');
  return payload.data;
@@ -606,7 +612,7 @@ const zones = {
   mangwon: { name:'망원', station:'행주대교', nx:58, ny:127, sample:1.6 },
   banpo: { name:'반포', station:'잠수교', nx:60, ny:125, sample:1.8 }
 };
-let config = { mode:'live', gemini:true, model:'gemini-2.5-flash' };
+let config = { mode:'live', gemini:false, model:'gemini-2.5-flash' };
 let activeZone='ttukseom', generation=0, stationPromise=null;
 let tideCache=null;
 const states={}, pending={};
@@ -669,7 +675,7 @@ function waterSummary(rows) {
   const values=rows.map(r=>r.value);
   return `${recent} · 조회 구간 ${Math.min(...values).toFixed(2)}~${Math.max(...values).toFixed(2)} m`;
 }
-async function waterData(){throw new Error('수위 API 규격 확인 및 연결 대기');}
+async function waterData(zone){return serverData('water',zone);}
 function renderChart(zone, rows, demo) {
   if(!rows.length) { text(`chart_${zone}`,'수위 연결 대기'); return; }
   const values=rows.map(r=>r.value), min=Math.min(...values)-.1,max=Math.max(...values)+.1;
@@ -759,14 +765,14 @@ function updateAI(zone) {
   const state=states[zone];
   const ready=config.mode==='live'&&!!config.gemini&&!!config.model&&!!state?.water&&!!state?.weather&&!state.water.demo&&!state.weather.demo&&!state.water.stale&&Date.now()-parseStamp(state.water.rows.at(-1).time)<=3600000&&Date.now()-parseStamp(state.weather.time)<=2*3600000;
   $(`btn_ai_${zone}`).disabled=!ready || !!state?.aiBusy;
-  $(`btn_ai_${zone}`).title=ready?'표시된 수위·날씨를 Google에 전송합니다':'최신 수위·날씨 연결 후 사용 가능합니다';
+  $(`btn_ai_${zone}`).title=ready?'표시된 수위·날씨를 Google에 전송합니다':'AI 어드바이저 서버 연결 준비 중입니다';
   return ready;
 }
 async function loadZoneData(zone,force=false) {
   if(pending[zone]===generation&&!force) return;
   const gen=generation,cfg={...config}, token={};pending[zone]=gen;
   const state={loaded:0,water:null,weather:null,token};states[zone]=state;
-  text(`ai_result_${zone}`,'수위 연결 후 AI 참고 조언을 사용할 수 있습니다.');updateAI(zone);
+  text(`ai_result_${zone}`,'AI 어드바이저 서버 연결 준비 중입니다.');updateAI(zone);
   renderTide(zone,null,new Error('인천 조석 예보 조회 중…'));
   renderWater(zone,null,new Error('수위 조회 중…'));renderWeather(zone,null,new Error('날씨 조회 중…'));
   text(`chart_${zone}`,'수위 조회 중…');
