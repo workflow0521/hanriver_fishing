@@ -4,7 +4,7 @@ const zones = {
   mangwon: { name:'망원', station:'행주대교', nx:58, ny:127, sample:1.6 },
   banpo: { name:'반포', station:'잠수교', nx:60, ny:125, sample:1.8 }
 };
-let tideCache=null;
+let tideCache=null,stationPromise=null;
 function kst(date=new Date()) { return new Date(date.getTime()+9*3600000).toISOString().slice(0,16).replace(/[-T:]/g,''); }
 
 function parseStamp(s) {
@@ -31,6 +31,48 @@ async function fetchJSON(url, options={}) {
     if(!r.ok) throw new Error(`API 오류 (HTTP ${r.status})`);
     try { return await r.json(); } catch { throw new Error('JSON 응답이 아닙니다 · 인증키와 서비스 승인을 확인하세요'); }
   } finally { clearTimeout(timeout); }
+}
+
+function normalWater(rows, now=Date.now()) {
+  if(!Array.isArray(rows)) throw new Error('수위 응답 형식 오류');
+  const byTime=new Map();
+  for(const row of rows) {
+    const s=String(row.ymdhm??''); const t=parseStamp(s);
+    if(Number.isFinite(t) && t<=now+60000 && t>=now-6*3600000 && numeric(row.wl) && Number(row.wl)>-90) byTime.set(s,{time:s,value:Number(row.wl)});
+  }
+  const out=[...byTime.values()].sort((a,b)=>a.time.localeCompare(b.time));
+  if(!out.length) throw new Error('최근 6시간의 유효한 수위 관측값이 없습니다');
+  return out;
+}
+
+function waterContent(json) {
+  const code=String(json?.code??'');
+  if(code && code!=='200') {
+    const messages={900:'인증키 확인 필요',940:'등록한 사용 URL(DNS, IP) 확인 필요',941:'이메일 승인 대기',942:'인증키 차단 · 기관 문의 필요',943:'휴면 인증키 · 휴면 해제 필요',944:'삭제된 인증키',990:'조회 자료 없음'};
+    const safeCode=/^\d{3}$/.test(code)?code:'형식 오류';
+    throw new Error(`HRFCO ${safeCode} · ${messages[code]||'자료 조회 실패'}`);
+  }
+  if(!Array.isArray(json?.content)) throw new Error('HRFCO 응답 형식 오류');
+  return json.content;
+}
+
+async function waterData(zone,cfg) {
+  if(cfg.mode==='demo') return {demo:true,station:'가상 관측소',rows:Array.from({length:7},(_,i)=>({time:kst(new Date(Date.now()-(6-i)*3600000)),value:zones[zone].sample+[-.1,-.06,0,.05,.12,.18,.25][i]}))};
+  if(cfg.waterSource!=='hrfco') throw new Error('신청한 수위 서비스 승인·연결 대기 · 기상청 날씨는 별도로 조회됩니다');
+  if(!cfg.hrfco) throw new Error('HRFCO 인증키 미입력');
+  const base=`https://api.hrfco.go.kr/${encodeURIComponent(cfg.hrfco)}/waterlevel`;
+  if(!stationPromise) stationPromise=fetchJSON(`${base}/info.json`).then(waterContent).catch(e=>{stationPromise=null;throw e;});
+  const info=await stationPromise;
+  const matches=info.filter(r=>String(r.obsnm??'')===`서울시(${zones[zone].station})`);
+  if(matches.length!==1 || !/^\d+$/.test(String(matches[0].wlobscd))) throw new Error('관측소 코드·명칭을 확인할 수 없습니다 · HRFCO 관측소 목록 확인 필요');
+  const station=matches[0];
+  const endTime=Math.floor(Date.now()/600000)*600000;
+  const end=kst(new Date(endTime)), start=kst(new Date(endTime-6*3600000));
+  const json=await fetchJSON(`${base}/list/10M/${station.wlobscd}/${start}/${end}.json`);
+  const content=waterContent(json);
+  if(content.some(row=>String(row.wlobscd)!==String(station.wlobscd))) throw new Error('HRFCO 요청 관측소와 응답이 다릅니다');
+  const rows=normalWater(content);
+  return {demo:false,station:String(station.obsnm),rows,stale:Date.now()-parseStamp(rows.at(-1).time)>3600000};
 }
 
 function weatherBase(now,forecast) {
@@ -117,4 +159,4 @@ async function tideData(cfg) {
   tideCache=entry;return entry.promise;
 }
 
-export { zones, kst, weatherData, tideData, rainLabel, windDirection };
+export { zones, kst, waterData, waterContent, normalWater, weatherData, tideData, rainLabel, windDirection };
