@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 import {kst} from '../src/data.mjs';
 import {selectPublicData} from '../src/public-data.mjs';
+import {publicTableRows} from '../src/hrfco-public.mjs';
 
 const now=Date.parse('2026-11-11T09:01:00+09:00'),minute=60000;
 const stamp=ago=>kst(new Date(now-ago*minute));
@@ -46,4 +47,17 @@ test('the generated Pages app loads from a repository path without calling the p
  assert.equal(manifest.start_url,'./');
  assert.equal(manifest.scope,'./');
  assert(manifest.icons.every(icon=>icon.src.startsWith('./')));
+});
+
+test('the public station table parser verifies the gauge, units and time window',()=>{
+ const spec={id:'wlobscd',code:'1018662',value:'wl'};
+ const row=(ymdhm,wl)=>({ymdhm,wl,wlobscd:spec.code});
+ const from=Date.parse('2026-11-11T08:00:00+09:00'),to=Date.parse('2026-11-11T08:40:00+09:00');
+ const observed=publicTableRows([
+  row('2026-11-11 08:50',2),row('2026-11-11 08:40','0.95'),
+  row('2026-11-11 08:30','-9999'),row('2026-11-11 08:20',''),
+  row('2026-11-11 08:10',1.03),row('2026-11-11 07:50',1.1),
+ ],spec,from,to);
+ assert.deepEqual(observed,[{time:'202611110810',value:1.03},{time:'202611110840',value:0.95}]);
+ assert.throws(()=>publicTableRows([{...row('2026-11-11 08:40',1),wlobscd:'1018680'}],spec,from,to),/관측소/);
 });

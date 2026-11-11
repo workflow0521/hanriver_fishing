@@ -1,6 +1,7 @@
 import {mkdir, writeFile} from 'node:fs/promises';
 import {zones, parseStamp, waterData, weatherData, tideWindowData} from '../src/data.mjs';
 import {publicRiverFactor} from '../src/river-data.mjs';
+import {publicHydrology} from '../src/hrfco-public.mjs';
 import {snapshotWater, selectPublicData} from '../src/public-data.mjs';
 import {generateAdvice} from '../src/advice.mjs';
 
@@ -27,7 +28,7 @@ async function readPrevious(){
 function warning(error){
  const code=/^HRFCO (\d{3})\b/.exec(String(error?.message));
  if(code)return 'HRFCO '+code[1];
- if(error?.name==='TimeoutError'||error?.name==='AbortError')return '시간 초과';
+ if(error?.name==='TimeoutError'||error?.name==='AbortError'||error?.sourceFailure==='시간 초과')return '시간 초과';
  return '조회 실패';
 }
 
@@ -39,13 +40,35 @@ async function attempt(name,key,request){
  catch(error){statuses[name]=warning(error);return null;}
 }
 
+async function hydrology(name,api,publicTable){
+ const earlier=previous.statuses?.[name]||'';
+ const tableFirst=!config.hrfco||/시간 초과|공개 조회/.test(earlier);
+ const table=async()=>{
+  const value=await attempt(name,true,publicTable);
+  statuses[name]=value?'공개 조회 확보':'공개 조회 '+statuses[name];
+  return value;
+ };
+ if(tableFirst){
+  const value=await table();if(value||!config.hrfco)return value;
+  const tableStatus=statuses[name];
+  const direct=await attempt(name,config.hrfco,api);
+  if(!direct)statuses[name]=tableStatus+' · API '+statuses[name];
+  return direct;
+ }
+ const direct=await attempt(name,config.hrfco,api);
+ if(direct)return direct;
+ const apiStatus=statuses[name];
+ const value=await table();
+ if(!value)statuses[name]+=' · API '+apiStatus;
+ return value;
+}
+
 async function collectWater(zone){
  const prior=snapshotWater(previous.water?.[zone],72,now);
- const opts={delayMinutes:15,timeoutMs:9000,retries:0};
+ const opts={delayMinutes:15,timeoutMs:6000,retries:0};
  const name='water-'+zone;
- let fresh=await attempt(name,config.hrfco,()=>waterData(zone,config,{...opts,hours:prior?6:72}));
- if(!prior&&!fresh&&config.hrfco&&!/^HRFCO 9[04][0-4]$/.test(statuses[name]))
-  fresh=await attempt(name,config.hrfco,()=>waterData(zone,config,{...opts,hours:6}));
+ const hours=prior?6:72;
+ const fresh=await hydrology(name,()=>waterData(zone,config,{...opts,hours}),()=>publicHydrology('water',zone,hours));
  if(!fresh&&!prior)return null;
  const byTime=new Map();
  for(const row of [...(prior?.rows||[]),...(fresh?.rows||[])])byTime.set(row.time,row);
@@ -68,8 +91,8 @@ const weatherTask=Promise.all(Object.keys(zones).map(async zone=>{
 }));
 const tideTask=attempt('tides',config.tide,()=>tideWindowData(config));
 await Promise.all([waterTask,weatherTask]);
-const dam=await attempt('dam',config.hrfco,()=>publicRiverFactor('dam',config,6));
-const rain=await attempt('rain',config.hrfco,()=>publicRiverFactor('rain',config,24));
+const dam=await hydrology('dam',()=>publicRiverFactor('dam',config,6),()=>publicHydrology('dam','',6));
+const rain=await hydrology('rain',()=>publicRiverFactor('rain',config,24),()=>publicHydrology('rain','',24));
 const tides=await tideTask;
 const payload={
  schema:1,collectedAt:checked(),water,weather,

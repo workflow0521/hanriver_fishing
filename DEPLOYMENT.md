@@ -14,4 +14,6 @@ Settings → Secrets and variables → Actions의 저장소 비밀:
 
 `GEMINI_MODEL` 저장소 변수는 선택 사항입니다. API 키를 저장소 파일이나 브라우저 코드에 넣지 않습니다. 공개 응답은 `site/data/snapshot.json`으로만 배포하며 이 파일은 커밋하지 않습니다. 지난 배포의 실제 수위는 최대 24시간까지 복원할 수 있고, 오래된 자료는 관측 시각과 함께 표시합니다.
 
+홍수통제소 API 연결이 지연되면 같은 기관의 [공개 수문자료 표](https://www.hrfco.go.kr/sumun/waterlevelList.do)에서 동일 관측소·단위의 10분 자료를 조회합니다.
+
 GitHub Pages에는 요청을 처리하는 자체 서버가 없습니다. 방문자의 새로고침은 마지막 게시본을 다시 조회합니다. 실시간 생성형 AI 요청은 실행하지 않습니다. 예약 실행이 비활성화된 경우 Actions 화면에서 다시 활성화하고 수동 실행하세요.
