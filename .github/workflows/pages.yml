@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_advice:
+        description: Generate a public Gemini briefing using repository secrets
+        type: boolean
+        default: false
   schedule:
     - cron: '7,22,37,52 * * * *'
 permissions:
@@ -25,11 +30,18 @@ jobs:
         with:
           node-version: '22'
       - uses: actions/configure-pages@v5
+      - name: Build and verify the public dashboard
+        run: |
+          node scripts/build-pages.mjs
+          node --test scripts/test-pages.mjs
       - name: Collect public observations without exposing credentials
         run: node scripts/collect.mjs
         env:
           PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
           HRFCO_API_KEY: ${{ secrets.HRFCO_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          PUBLISH_ADVICE: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_advice }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site

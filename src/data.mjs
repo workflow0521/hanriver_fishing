@@ -1,10 +1,11 @@
+import {laggedWaterEnd} from './delayed-water.mjs';
 const zones = {
-  ttukseom: { name:'뚝섬', station:'청담대교', nx:62, ny:126, sample:1.2 },
-  yanghwa: { name:'양화/선유도', station:'한강대교', nx:58, ny:126, sample:1.5 },
-  mangwon: { name:'망원', station:'행주대교', nx:58, ny:127, sample:1.6 },
-  banpo: { name:'반포', station:'잠수교', nx:60, ny:125, sample:1.8 }
+  ttukseom: { name:'뚝섬', station:'청담대교', code:'1018662', nx:62, ny:126 },
+  yanghwa: { name:'양화/선유도', station:'한강대교', code:'1018683', nx:58, ny:126 },
+  mangwon: { name:'망원', station:'행주대교', code:'1019630', nx:58, ny:127 },
+  banpo: { name:'반포', station:'잠수교', code:'1018680', nx:60, ny:125 }
 };
-let tideCache=null,stationPromise=null;
+
 function kst(date=new Date()) { return new Date(date.getTime()+9*3600000).toISOString().slice(0,16).replace(/[-T:]/g,''); }
 
 function parseStamp(s) {
@@ -23,25 +24,33 @@ function reason(e) {
   return e.message || '데이터 조회 실패';
 }
 
-async function fetchJSON(url, options={}) {
+async function fetchJSONOnce(url, options={}) {
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),15000);
+  const {timeoutMs=15000,retries=1,...fetchOptions}=options;
+  const timeout=setTimeout(()=>controller.abort(),timeoutMs);
   try {
-    const r=await fetch(url,{...options,signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'});
-    if(!r.ok) throw new Error(`API 오류 (HTTP ${r.status})`);
+    const r=await fetch(url,{...fetchOptions,headers:{Accept:'application/json',...fetchOptions.headers},signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+    if(!r.ok) { await r.body?.cancel(); throw new Error(`API 오류 (HTTP ${r.status})`); }
     try { return await r.json(); } catch { throw new Error('JSON 응답이 아닙니다 · 인증키와 서비스 승인을 확인하세요'); }
   } finally { clearTimeout(timeout); }
 }
 
-function normalWater(rows, now=Date.now()) {
+async function fetchJSON(url,options={}) {
+ try{return await fetchJSONOnce(url,options);}catch(error){
+  if(options.retries===0||error?.name!=='AbortError'&&!(error instanceof TypeError)&&!/HTTP (502|503|504)/.test(error?.message||''))throw error;
+  return fetchJSONOnce(url,options);
+ }
+}
+
+function normalWater(rows, now=Date.now(),hours=6) {
   if(!Array.isArray(rows)) throw new Error('수위 응답 형식 오류');
   const byTime=new Map();
   for(const row of rows) {
     const s=String(row.ymdhm??''); const t=parseStamp(s);
-    if(Number.isFinite(t) && t<=now+60000 && t>=now-6*3600000 && numeric(row.wl) && Number(row.wl)>-90) byTime.set(s,{time:s,value:Number(row.wl)});
+    if(Number.isFinite(t) && t<=now+60000 && t>=now-hours*3600000 && numeric(row.wl) && Number(row.wl)>-90) byTime.set(s,{time:s,value:Number(row.wl)});
   }
   const out=[...byTime.values()].sort((a,b)=>a.time.localeCompare(b.time));
-  if(!out.length) throw new Error('최근 6시간의 유효한 수위 관측값이 없습니다');
+  if(!out.length) throw new Error('요청 기간에 유효한 수위 관측값이 없습니다');
   return out;
 }
 
@@ -56,23 +65,27 @@ function waterContent(json) {
   return json.content;
 }
 
-async function waterData(zone,cfg) {
-  if(cfg.mode==='demo') return {demo:true,station:'가상 관측소',rows:Array.from({length:7},(_,i)=>({time:kst(new Date(Date.now()-(6-i)*3600000)),value:zones[zone].sample+[-.1,-.06,0,.05,.12,.18,.25][i]}))};
+async function waterData(zone,cfg,options={}) {
   if(cfg.waterSource!=='hrfco') throw new Error('신청한 수위 서비스 승인·연결 대기 · 기상청 날씨는 별도로 조회됩니다');
   if(!cfg.hrfco) throw new Error('HRFCO 인증키 미입력');
   const base=`https://api.hrfco.go.kr/${encodeURIComponent(cfg.hrfco)}/waterlevel`;
-  if(!stationPromise) stationPromise=fetchJSON(`${base}/info.json`).then(waterContent).catch(e=>{stationPromise=null;throw e;});
-  const info=await stationPromise;
-  const matches=info.filter(r=>String(r.obsnm??'')===`서울시(${zones[zone].station})`);
-  if(matches.length!==1 || !/^\d+$/.test(String(matches[0].wlobscd))) throw new Error('관측소 코드·명칭을 확인할 수 없습니다 · HRFCO 관측소 목록 확인 필요');
-  const station=matches[0];
-  const endTime=Math.floor(Date.now()/600000)*600000;
-  const end=kst(new Date(endTime)), start=kst(new Date(endTime-6*3600000));
-  const json=await fetchJSON(`${base}/list/10M/${station.wlobscd}/${start}/${end}.json`);
+  // Codes and exact station names verified against official HRFCO metadata.
+  const station={wlobscd:zones[zone].code,obsnm:'서울시('+zones[zone].station+')'};
+  const {hours=6,delayMinutes=0,...fetchOptions}=options;
+  if(![6,24,72].includes(hours))throw new Error('조회 기간은 6·24·72시간 중 선택하세요');
+  const endTime=laggedWaterEnd(Date.now(),delayMinutes);
+  const end=kst(new Date(endTime)), start=kst(new Date(endTime-hours*3600000));
+  const opts={...fetchOptions,headers:{'User-Agent':'HanRiverFishing/1.0 (+https://hangang-fishing-pocket.fluffycharm2.chatgpt.site)',...fetchOptions.headers}};
+  let json,historyUnavailable=false;
+  try{json=await fetchJSON(`${base}/list/10M/${station.wlobscd}/${start}/${end}.json`,opts);}
+  catch(error){
+   if(error?.name!=='AbortError'&&error?.name!=='TimeoutError'&&!(error instanceof TypeError)&&!/HTTP (502|503|504)/.test(error?.message||''))throw error;
+   json=await fetchJSON(`${base}/list/10M/${station.wlobscd}.json`,{...opts,retries:0});historyUnavailable=true;
+  }
   const content=waterContent(json);
-  if(content.some(row=>String(row.wlobscd)!==String(station.wlobscd))) throw new Error('HRFCO 요청 관측소와 응답이 다릅니다');
-  const rows=normalWater(content);
-  return {demo:false,station:String(station.obsnm),rows,stale:Date.now()-parseStamp(rows.at(-1).time)>3600000};
+  if(content.some(row=>String(row.wlobscd)!==String(station.wlobscd)))throw new Error('HRFCO 요청 관측소와 응답이 다릅니다');
+  const rows=normalWater(content,delayMinutes?endTime:Date.now(),hours);
+  return {demo:false,delayMinutes,cutoffTime:end,station:String(station.obsnm),stationCode:station.wlobscd,hours,requestedFrom:start,requestedTo:end,historyUnavailable,rows,stale:Date.now()-parseStamp(rows.at(-1).time)>3600000};
 }
 
 function weatherBase(now,forecast) {
@@ -108,8 +121,42 @@ function rainLabel(value) {
   return /^(강수없음|[\d.]+\s*mm(\s*(미만|이상))?|[\d.]+\s*[~～]\s*[\d.]+\s*mm)$/.test(label)?label:'강수량 자료 없음';
 }
 
+function villageBase(now=Date.now()) {
+ const s=kst(new Date(now-20*60000)),hour=Number(s.slice(8,10));
+ const eligible=[2,5,8,11,14,17,20,23].filter(h=>h<=hour);
+ return eligible.length?{base_date:s.slice(0,8),base_time:String(eligible.at(-1)).padStart(2,'0')+'00'}:{base_date:kst(new Date(parseStamp(s.slice(0,8)+'0000')-86400000)).slice(0,8),base_time:'2300'};
+}
+function forecastHours(items,base) {
+ if(items.some(r=>String(r.baseDate)!==base.base_date||String(r.baseTime).padStart(4,'0')!==base.base_time))throw new Error('요청 시각과 다른 단기예보 자료입니다');
+ const grouped=new Map();for(const row of items){const time=String(row.fcstDate)+String(row.fcstTime).padStart(4,'0');if(!Number.isFinite(parseStamp(time)))continue;if(!grouped.has(time))grouped.set(time,{time});grouped.get(time)[row.category]=row.fcstValue;}
+ return [...grouped.values()].sort((a,b)=>a.time.localeCompare(b.time));
+}
+function forecastPeriods(shortRows=[],ultraRows=[],now=Date.now()) {
+ const today=kst(new Date(now)).slice(0,8),midnight=parseStamp(today+'0000');
+ const short=shortRows.filter(r=>numeric(r.TMP)&&Number(r.TMP)>-90&&numeric(r.WSD)&&Number(r.WSD)>=0).map(r=>({time:r.time,temp:Number(r.TMP),wind:Number(r.WSD),direction:windDirection(r.VEC),rain:rainLabel(r.PCP),pop:numeric(r.POP)&&Number(r.POP)>=0&&Number(r.POP)<=100?Number(r.POP):null,desc:weatherLabel(Number(r.PTY),Number(r.SKY))}));
+ const byTime=new Map(short.map(r=>[r.time,r]));for(const row of ultraRows)byTime.set(row.time,{...byTime.get(row.time),...row});
+ const items=[3,5].map(h=>{const target=kst(new Date(Math.round((now+h*3600000)/3600000)*3600000)),r=byTime.get(target);return {id:'h'+h,label:h+'시간 후',time:target,...(r||{unavailable:true})};});
+ for(const [offset,id,label] of [[1,'tomorrow','내일'],[2,'dayAfter','모레']]){
+  const day=kst(new Date(midnight+offset*86400000)).slice(0,8),rows=shortRows.filter(r=>r.time.slice(0,8)===day),valid=short.filter(r=>r.time.slice(0,8)===day);
+  if(!valid.length){items.push({id,label,day,unavailable:true});continue;}
+  const mins=rows.filter(r=>numeric(r.TMN)&&Number(r.TMN)>-90).map(r=>Number(r.TMN)),maxs=rows.filter(r=>numeric(r.TMX)&&Number(r.TMX)>-90).map(r=>Number(r.TMX));
+  const pops=valid.filter(r=>r.pop!==null).map(r=>r.pop),pty=Math.max(...rows.filter(r=>numeric(r.PTY)).map(r=>Number(r.PTY)),0),sky=Math.max(...rows.filter(r=>numeric(r.SKY)).map(r=>Number(r.SKY)),1);
+  items.push({id,label,day,tempMin:mins.length?Math.min(...mins):Math.min(...valid.map(r=>r.temp)),tempMax:maxs.length?Math.max(...maxs):Math.max(...valid.map(r=>r.temp)),windMax:Math.max(...valid.map(r=>r.wind)),popMax:pops.length?Math.max(...pops):null,desc:weatherLabel(pty,sky),hours:valid.length,rangeSource:mins.length&&maxs.length?'official':'hourly'});
+ }
+ return {day:today,items};
+}
+async function villageData(zone,cfg) {
+ const latest=villageBase();let base=latest;
+ for(let attempt=0;attempt<2;attempt++){
+  const params=new URLSearchParams({serviceKey:decodeKey(cfg.kma),pageNo:'1',numOfRows:'1000',dataType:'JSON',...base,nx:String(zones[zone].nx),ny:String(zones[zone].ny)});
+  const json=await fetchJSON('https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?'+params);
+  if(String(json?.response?.header?.resultCode)==='03'&&attempt===0){const previous=kst(new Date(parseStamp(base.base_date+base.base_time)-3*3600000));base={base_date:previous.slice(0,8),base_time:previous.slice(8)};continue;}
+  return {base,rows:forecastHours(weatherItems(json),base)};
+ }
+ throw new Error('단기예보 자료 게시 대기');
+}
+
 async function weatherData(zone,cfg) {
-  if(cfg.mode==='demo') return {demo:true,time:kst(),temp:23,wind:2.5,desc:'구름많음 ☁️',forecast:Array.from({length:6},(_,i)=>({time:kst(new Date(Date.now()+(i+1)*3600000)).slice(0,10)+'00',temp:23-i*.4,wind:2.5+i*.2,desc:'☁️'}))};
   if(!cfg.kma) throw new Error('기상청 서비스키 미입력');
   const query=async forecast=>{
     const base=weatherBase(Date.now(),forecast);
@@ -117,7 +164,7 @@ async function weatherData(zone,cfg) {
     const json=await fetchJSON(`https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/${forecast?'getUltraSrtFcst':'getUltraSrtNcst'}?${params}`);
     return {items:weatherItems(json),base};
   };
-  const [ncst,fcst]=await Promise.allSettled([query(false),query(true)]);
+  const [ncst,fcst,village]=await Promise.allSettled([query(false),query(true),villageData(zone,cfg)]);
   if(ncst.status==='rejected') throw ncst.reason;
   const {items,base}=ncst.value;
   if(items.some(r=>String(r.baseDate)!==base.base_date || String(r.baseTime).padStart(4,'0')!==base.base_time)) throw new Error('요청 시각과 다른 기상청 관측 자료입니다');
@@ -130,6 +177,15 @@ async function weatherData(zone,cfg) {
     output.forecast=[...grouped.values()].filter(r=>Number.isFinite(parseStamp(r.time))&&r.time>kst()&&numeric(r.T1H)&&Number(r.T1H)>-90&&numeric(r.WSD)&&Number(r.WSD)>=0).sort((a,b)=>a.time.localeCompare(b.time)).slice(0,6).map(r=>({time:r.time,temp:Number(r.T1H),wind:Number(r.WSD),direction:windDirection(r.VEC),rain:rainLabel(r.RN1),desc:weatherLabel(Number(r.PTY),Number(r.SKY))}));
     if(!output.forecast.length) output.forecastError='유효한 이후 시간 예보 없음';
   } else output.forecastError=reason(fcst.reason);
+  output.periods=forecastPeriods(village.status==='fulfilled'?village.value.rows:[],output.forecast);
+  if(village.status==='fulfilled'){
+    const issuedAt=village.value.base.base_date+village.value.base.base_time;
+    output.periods.issuedAt=issuedAt;
+    // Retain hourly probabilities so the client can select the next five hours
+    // again as the clock advances, without treating one hour as a five-hour total.
+    output.probabilityForecast={issuedAt,rows:village.value.rows.filter(r=>Number.isFinite(parseStamp(r.time))&&numeric(r.POP)&&Number(r.POP)>=0&&Number(r.POP)<=100).map(r=>({time:r.time,pop:Number(r.POP)}))};
+  }
+  else output.periods.error=reason(village.reason);
   return output;
 }
 
@@ -147,16 +203,21 @@ function normalTides(json,day) {
   return rows.sort((a,b)=>a.time.localeCompare(b.time));
 }
 
-async function tideData(cfg) {
-  const day=kst().slice(0,8);
-  if(cfg.mode==='demo') return {demo:true,day,rows:[['만조','0415',810],['간조','1030',120],['만조','1645',830],['간조','2310',100]].map(([type,hhmm,height])=>({type,time:day+hhmm,height}))};
+async function tideData(cfg,day=kst().slice(0,8),options={}) {
+  if(!/^\d{8}$/.test(day)||!Number.isFinite(parseStamp(day+'0000')))throw new Error('조석 조회 날짜를 확인하세요');
   const key=decodeKey(cfg.tide||cfg.kma);
   if(!key) throw new Error('조석예보 서비스키 미입력 · 공공데이터포털 인증키를 입력하세요');
-  if(tideCache?.day===day&&tideCache.key===key&&Date.now()-tideCache.loaded<300000) return tideCache.promise;
   const params=new URLSearchParams({serviceKey:key,type:'json',obsCode:'DT_0001',reqDate:day,numOfRows:'300',pageNo:'1'});
-  const entry={day,key,loaded:Date.now()};
-  entry.promise=fetchJSON(`https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?${params}`).then(json=>({demo:false,day,rows:normalTides(json,day)})).catch(e=>{if(tideCache===entry)tideCache=null;throw e;});
-  tideCache=entry;return entry.promise;
+  const json=await fetchJSON(`https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?${params}`,options);
+  return {demo:false,day,rows:normalTides(json,day)};
 }
 
-export { zones, kst, waterData, waterContent, normalWater, weatherData, tideData, rainLabel, windDirection };
+async function tideWindowData(cfg,now=Date.now()){
+ const day=kst(new Date(now)).slice(0,8),midnight=parseStamp(day+'0000'),days=[-1,0,1].map(offset=>kst(new Date(midnight+offset*86400000)).slice(0,8));
+ const results=await Promise.allSettled(days.map(date=>tideData(cfg,date,{timeoutMs:5000,retries:0})));
+ if(results[1].status!=='fulfilled')throw results[1].reason;
+ const available=results.flatMap((r,index)=>r.status==='fulfilled'?[{day:days[index],rows:r.value.rows}]:[]);
+ return {...results[1].value,nearbyRows:available.flatMap(item=>item.rows),nearbyDays:available.map(item=>item.day),nearbyIncomplete:available.length!==3};
+}
+
+export { zones, kst, parseStamp, fetchJSON, waterData, waterContent, normalWater, weatherData, tideData, tideWindowData, rainLabel, windDirection, villageBase, forecastHours, forecastPeriods };

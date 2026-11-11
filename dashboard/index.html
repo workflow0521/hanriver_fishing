@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>한강 낚시</title>
+<style>
+        /* 기본 리셋 및 폰트 설정 */
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-dark: #1e40af;
+            --border-light: #e2e8f0;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --warning: #f59e0b;
+            --info: #0ea5e9;
+            --info-bg: #f0f9ff;
+            --ai-gradient: linear-gradient(135deg, #a855f7, #6366f1);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+            line-height: 1.5;
+            color: var(--text-main);
+            background-color: var(--bg-body);
+            margin: 0;
+            padding: 20px 10px;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        h1 {
+            text-align: center; font-size: 1.6rem; font-weight: 800; color: var(--text-main);
+            margin-bottom: 25px; letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 1.15rem; font-weight: 700; color: var(--text-main);
+            margin: 30px 0 15px 0; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* 공통 카드 스타일 */
+        .card {
+            background-color: var(--bg-card); border-radius: var(--radius-lg); padding: 24px;
+            box-shadow: var(--shadow-md); border: 1px solid rgba(226, 232, 240, 0.8); margin-bottom: 20px;
+        }
+
+        /* 모던 탭 스타일 */
+        .tab-menu {
+            display: flex; background-color: #e2e8f0; padding: 6px; border-radius: 14px; margin-bottom: 20px; gap: 4px;
+        }
+        .tab-button {
+            flex: 1; background-color: transparent; border: none; padding: 12px 0; font-size: 15px; font-weight: 600;
+            color: var(--text-muted); border-radius: 10px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .tab-button:hover { color: var(--text-main); }
+        .tab-button.active { background-color: var(--bg-card); color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+
+        /* 지도 스타일 */
+        .map-card { padding: 16px 20px 24px 20px; }
+        .map-title { font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .map-container { position: relative; width: 100%; padding-bottom: 45%; background-color: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border-light); overflow: hidden; }
+        .map-river-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .map-marker { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; transition: all 0.3s ease; }
+        .marker-dot { width: 16px; height: 16px; background-color: var(--primary); border-radius: 50%; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.3s ease, transform 0.2s; border: 2px solid white; }
+        .map-marker:hover .marker-dot { transform: scale(1.2); }
+        .marker-label { margin-top: 6px; font-size: 0.8rem; font-weight: 700; color: var(--text-main); background-color: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: 1px solid var(--border-light); }
+        .map-marker.active { z-index: 30; }
+        .map-marker.active .marker-dot { background-color: var(--danger); border-color: #fff; }
+        .map-marker.active .marker-label { color: var(--danger); border-color: var(--danger); background-color: #fff; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2); transform: translateY(-2px); }
+        .map-marker.active .marker-dot::after { content: ''; position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px; border-radius: 50%; border: 2px solid var(--danger); animation: pulse-ring 1.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1); }
+        @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; border-width: 3px; } 100% { transform: scale(2.5); opacity: 0; border-width: 1px; } }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 실시간 위젯 스타일 */
+        .dashboard-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+        .dash-card { background-color: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); display: flex; flex-direction: column; justify-content: center; color: white; }
+
+        /* 수위 배너 가로 모드 */
+        .dash-card.level { background: linear-gradient(135deg, #3b82f6, #1d4ed8); flex-direction: row; align-items: center; justify-content: space-between; padding: 24px; }
+        .level-left { flex: 1; }
+        .level-right { text-align: right; }
+        .level-right .dash-diff { margin-top: 0; font-size: 1rem; }
+        .level-right .dash-update { margin-top: 6px; }
+
+        /* 날씨/풍속 통합 카드 */
+        .dash-card.weather-forecast { background: linear-gradient(135deg, #0ea5e9, #0284c7); padding: 24px; }
+        .forecast-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+        .forecast-current-right { text-align: right; }
+
+        .dash-title { font-size: 0.85rem; color: rgba(255, 255, 255, 0.9); font-weight: 600; margin-bottom: 6px; }
+        .dash-value { font-size: 1.8rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px; }
+        .dash-unit { font-size: 0.9rem; font-weight: 600; margin-left: 2px; opacity: 0.9; }
+        .dash-diff { font-size: 0.85rem; font-weight: 600; margin-top: 8px; }
+
+        /* 타임라인(시간대별 예보) 스타일 */
+        .timeline-container { display: flex; gap: 10px; margin-top: 15px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.4) transparent; }
+        .timeline-container::-webkit-scrollbar { height: 6px; }
+        .timeline-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 4px; }
+
+        .timeline-item { flex: 1; min-width: 65px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: background 0.2s; }
+        .timeline-item.current { background: rgba(255, 255, 255, 0.25); border: 1px solid rgba(255, 255, 255, 0.5); font-weight: bold; }
+        .timeline-time { font-size: 0.75rem; opacity: 0.9; }
+        .timeline-icon { font-size: 1.3rem; margin: 2px 0; }
+        .timeline-temp { font-size: 0.9rem; font-weight: 700; }
+        .timeline-wind { font-size: 0.75rem; opacity: 0.85; background: rgba(0,0,0,0.15); padding: 2px 6px; border-radius: 10px;}
+
+        .diff-up { color: #fca5a5; }
+        .diff-down { color: #93c5fd; }
+        .text-good { color: #86efac; }
+        .text-bad { color: #fca5a5; }
+        .text-normal { color: #fef08a; }
+        .dash-update { font-size: 0.7rem; color: rgba(255, 255, 255, 0.7); margin-top: 12px; }
+
+        /* AI 어드바이저 카드 스타일 */
+        .ai-card {
+            border: 2px solid transparent;
+            background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+                        var(--ai-gradient) border-box;
+            position: relative;
+        }
+        .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .ai-title { font-weight: 800; font-size: 1.1rem; color: #4f46e5; display: flex; align-items: center; gap: 8px; }
+        .btn-ai {
+            background: var(--ai-gradient); color: white; border: none; padding: 8px 16px; border-radius: 8px;
+            font-weight: 700; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; gap: 5px; font-size: 0.9rem;
+        }
+        .btn-ai:hover { opacity: 0.9; }
+        .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
+        .ai-content {
+            background: #f8fafc; border-radius: 8px; padding: 15px; font-size: 0.95rem; color: var(--text-main);
+            min-height: 60px; line-height: 1.6;
+        }
+
+        @media (max-width: 600px) {
+            .dash-card { padding: 16px; }
+            .dash-card.level { flex-direction: column; align-items: flex-start; }
+            .level-right { text-align: left; margin-top: 12px; }
+            .level-right .dash-diff { margin-top: 0; }
+            .dash-title { font-size: 0.75rem; }
+            .dash-value { font-size: 1.5rem; }
+            .dash-diff { font-size: 0.75rem; }
+            .map-container { padding-bottom: 60%; }
+            .tab-button { font-size: 13px; padding: 10px 0; }
+        }
+
+        /* 그래프 및 테이블 영역 스타일 */
+        .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .chart-title { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+        .trend-badge { font-size: 0.75rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; }
+        .trend-badge.up { background-color: var(--danger-bg); color: var(--danger); }
+        .trend-badge.down { background-color: var(--info-bg); color: var(--info); }
+        .chart-container { position: relative; height: 220px; width: 100%; }
+
+        .table-header-area { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+        .today-date { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 500px; }
+        th, td { padding: 14px 16px; text-align: left; font-size: 0.95rem; border-bottom: 1px solid var(--border-light); }
+        th { background-color: #f8fafc; color: var(--text-muted); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
+        th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+        td { color: var(--text-main); }
+        .highlight { color: var(--primary-dark); font-weight: 800; font-size: 1.05em; }
+        .next-day { font-size: 0.75em; color: var(--text-muted); margin-left: 4px; font-weight: normal; }
+
+        /* 팁 박스 */
+        .tip-box { background-color: var(--info-bg); border-left: 4px solid var(--info); padding: 20px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin-top: 24px; }
+        .tip-box h3 { color: var(--info); font-size: 1rem; font-weight: 700; margin: 0 0 12px 0; display: flex; align-items: center; gap: 6px; }
+        .tip-box ul { margin: 0; padding-left: 20px; color: #334155; font-size: 0.95rem; }
+        .tip-box li { margin-bottom: 8px; }
+        .api-notice { font-size: 0.8rem; color: var(--text-muted); text-align: right; margin-top: 12px; }
+        .api-status { font-size: 0.75rem; color: #10b981; font-weight: bold; padding: 2px 6px; background: #d1fae5; border-radius: 4px; display: inline-block; margin-bottom: 5px; }
+    * { box-sizing: border-box; }
+.toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.settings { border-top:4px solid #d97706; }
+.settings label { display:block; margin:12px 0 5px; font-weight:600; }
+.settings input,.settings select { display:block; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:5px; font:inherit; }
+.settings button,#refresh { padding:9px 14px; border:0; border-radius:8px; cursor:pointer; background:#1d4ed8; color:white; font:inherit; }
+button:disabled { cursor:not-allowed; opacity:.6; }
+summary { cursor:pointer; font-weight:700; }
+.small { font-size:.82rem; color:#475569; }
+.notice { background:#fffaf0; border-color:#fcd34d; font-size:.9rem; }
+.notice p { margin:8px 0; }
+a { color:#1d4ed8; }
+.api-status { background:#fff3cd; color:#854d0e; }
+.api-status.live { background:#dcfce7; color:#166534; }
+.trend-badge.flat { background:#f1f5f9; color:#475569; }
+.water-chart { height:100%; width:100%; display:flex; align-items:center; justify-content:center; color:#64748b; }
+.water-chart svg { width:100%; height:100%; }
+.ai-content { white-space:pre-wrap; overflow-wrap:anywhere; }
+.map-marker { transform:translate(-50%,-10px); }
+.map-marker:focus-visible { outline:3px solid #1d4ed8; outline-offset:5px; }
+.api-notice { text-align:left; }
+@media(max-width:600px) { .card { padding:16px; } .ai-header { align-items:flex-start; flex-direction:column; gap:12px; } .marker-label { font-size:.65rem; padding:2px 4px; } .trend-badge { max-width:48%; } }
+@media(prefers-reduced-motion:reduce) { *,*::after { animation:none !important; transition:none !important; } }
+
+    /* Mobile refinement of the original blue and white HTML. */
+body{font-size:16px;padding:18px 12px 32px}
+.container{max-width:760px}
+h1{font-size:24px;margin:8px 0 16px}
+.connection-bar{font-size:12px;color:#475569;margin:0 0 12px;gap:8px}
+#refresh{min-height:44px;font-size:14px}
+.tab-menu{position:sticky;top:0;z-index:50;margin-bottom:12px}
+.tab-button{min-height:44px;font-size:14px}
+.card{margin-bottom:12px;padding:18px;box-shadow:var(--shadow-sm)}
+.map-card{padding:14px}
+.map-title{font-size:16px}
+.map-container{padding-bottom:52%}
+.map-river-svg text{font-weight:500}
+.map-marker{min-width:44px;min-height:44px;transform:translate(-50%,-8px)}
+.marker-label{font-size:14px;padding:2px 6px}
+#marker_mangwon .marker-label{order:-1;margin:0 0 6px}
+#marker_mangwon{transform:translate(-50%,-40px)}
+#marker_yanghwa .marker-label{margin-top:12px}
+.map-marker.active .marker-dot::after{animation:none;border-color:rgba(239,68,68,.3)}
+.map-help{font-size:14px;color:#475569;margin:0 2px 18px}
+.map-help summary{min-height:32px;font-weight:500}
+.map-help p{margin:8px 0}
+.chart-title{font-size:16px}
+.chart-container{height:175px}
+.chart-header{gap:8px;margin-bottom:10px}
+.water-chart{background:linear-gradient(0deg,#f8fafc,#fff);border-radius:8px;font-size:14px}
+.trend-badge{font-size:12px;padding:5px 9px;white-space:nowrap}
+.dashboard-grid{gap:12px;margin-bottom:16px}
+.dash-card.level,.dash-card.weather-forecast{padding:18px}
+.dash-card.level{flex-direction:row;gap:12px;align-items:center}
+.level-right{max-width:52%;margin:0;text-align:right}
+.dash-title,.dash-diff{font-size:14px}
+.dash-value{font-size:28px}
+.dash-update{font-size:12px;color:rgba(255,255,255,.92);overflow-wrap:anywhere}
+.level-right .dash-diff{font-size:12px}
+.api-status{font-size:12px}
+.timeline-item{min-width:72px}
+.timeline-time,.timeline-wind{font-size:12px}
+.timeline-icon{font-size:14px!important}
+.today-date{font-size:14px;font-weight:500}
+table{min-width:0;width:100%;table-layout:fixed}
+th,td{padding:12px 6px;font-size:14px;overflow-wrap:anywhere}
+th{font-size:14px}
+td small{font-size:12px}
+.api-notice{font-size:12px}
+h2{font-size:18px;margin:20px 0 10px!important}
+.ai-header{gap:12px;margin-bottom:10px}
+.ai-title{font-size:16px}
+.btn-ai{min-height:44px;font-size:14px}
+.ai-content{font-size:14px;min-height:0;padding:12px}
+@media(max-width:420px){h1{font-size:22px}.card{padding:14px}.map-card{padding:12px}.dash-card.level{flex-direction:column;align-items:flex-start}.level-right{max-width:100%;text-align:left}.chart-header{align-items:flex-start}.marker-label{font-size:14px}.small{font-size:12px}}
+
+
+html{scroll-behavior:smooth;scroll-padding-top:76px}body{padding:env(safe-area-inset-top) 12px calc(88px + env(safe-area-inset-bottom));-webkit-tap-highlight-color:transparent}.container{max-width:760px}.app-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 2px 14px}.app-heading h1{margin:0;font-size:24px}.app-heading p{margin:3px 0 0;font-size:12px;color:#64748b}.install-open{display:inline-flex;align-items:center;gap:6px;min-height:44px;flex-shrink:0;border:1px solid #dbeafe;border-radius:12px;background:#fff;color:#1d4ed8;padding:10px 12px;font:inherit;font-size:13px;font-weight:600}.connection-bar{margin-bottom:10px}.tab-menu{top:0;box-shadow:0 4px 10px #0f172a08;padding:6px;background:#f8fafc;border-radius:14px;border:1px solid #e2e8f0}.tab-button{border:0;border-radius:10px}.tab-button.active{background:#2563eb;color:#fff;box-shadow:0 2px 5px #2563eb25}.app-nav{position:fixed;bottom:0;left:0;right:0;z-index:80;background:#fff;border-top:1px solid #e2e8f0;padding:7px max(8px,env(safe-area-inset-left)) calc(7px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:8px}.app-nav button{min-width:0;max-width:160px;flex:1;border:0;background:transparent;border-radius:12px;color:#64748b;min-height:52px;font:inherit;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.app-nav svg{width:22px;height:22px}.app-nav button.active{color:#1d4ed8;background:#eff6ff}.install-dialog{border:0;border-radius:22px;padding:22px;width:min(420px,calc(100vw - 32px));box-sizing:border-box;color:#0f172a}.install-dialog::backdrop{background:#0f172a66}.install-dialog h2{margin:0!important;font-size:21px}.install-dialog p{font-size:14px;line-height:1.7;color:#475569}.install-dialog .dialog-title{display:flex;justify-content:space-between;align-items:center;gap:12px}.install-dialog button{font:inherit;border:0;border-radius:10px;min-height:44px;padding:9px 14px;cursor:pointer}.install-dialog .close{background:#f1f5f9;color:#475569}.install-dialog .devices{display:flex;gap:6px;margin:18px 0 12px}.install-dialog .devices button{flex:1;font-size:13px;background:#f1f5f9;color:#475569}.install-dialog .devices button.active{background:#dbeafe;color:#1d4ed8}.install-dialog ol{padding-left:24px;font-size:14px;line-height:1.8}.install-dialog li{margin:8px 0}.install-dialog .primary{background:#2563eb;color:#fff;width:100%;margin-top:8px}.install-dialog .copy{background:#eff6ff;color:#1d4ed8;width:100%;margin-top:8px}.install-dialog output{display:block;font-size:13px;color:#1d4ed8;margin:12px 0 0}.offline-banner{position:fixed;top:env(safe-area-inset-top);left:12px;right:12px;z-index:100;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:12px;padding:12px;font-size:14px;box-shadow:0 6px 20px #0f172a15}.offline-banner[hidden]{display:none}button:focus-visible,[role=button]:focus-visible,a:focus-visible{outline:3px solid #93c5fd;outline-offset:3px}button{touch-action:manipulation}.map-help summary{min-height:44px;display:flex;align-items:center}.ai-content{white-space:pre-wrap}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important}}@media(max-width:360px){.app-heading h1{font-size:22px}.install-open{padding:8px;font-size:12px}.card{padding:12px}.trend-badge{max-width:52%;white-space:normal}.chart-title{font-size:14px}}
+.tide-summary{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px;margin:0 0 14px;font-size:.88rem;color:#1e3a8a;line-height:1.65}.tide-summary strong{display:block;font-size:1.3rem;line-height:1.4}.tide-next{background:#eff6ff}.ai-basis{font-size:.8rem;line-height:1.6;color:#64748b;margin:0 0 10px;overflow-wrap:anywhere}.ai-content{white-space:pre-line;overflow-wrap:anywhere}
+.weather-outlook{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:6px 0 18px}.weather-mini{background:rgba(255,255,255,.97);color:#0f172a;border:1px solid #bae6fd;border-radius:12px;padding:11px 10px;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:1.45}.weather-mini b{color:#0369a1;font-size:13px}.weather-mini strong{font-size:19px;letter-spacing:-.5px}.weather-mini small{font-size:10px;color:#64748b}.weather-mini .period-meta{font-size:11px;color:#475569}.weather-mini.unavailable strong{font-size:14px;color:#64748b}@media(max-width:600px){.weather-outlook{grid-template-columns:repeat(2,minmax(0,1fr))}.weather-mini{padding:10px}.weather-mini strong{font-size:18px}.app-nav{gap:2px}.app-nav button{font-size:11px}}
+.water-periods{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.water-periods button,.water-actions button{font:inherit;font-size:12px;font-weight:650;min-height:40px;padding:8px 13px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer}.water-periods button.active{color:#1d4ed8;border-color:#93c5fd;background:#eff6ff}.water-periods .water-reload{margin-left:auto}.water-request-status{display:block;margin:10px 0;padding:10px 12px;border-radius:10px;background:#eff6ff;color:#1e40af;font-size:12px;line-height:1.6;overflow-wrap:anywhere}.water-request-status[data-phase="error"]{background:#fff7ed;color:#9a3412}.water-request-status[data-phase="pending"]{background:#f0f9ff;color:#075985}.water-reload:disabled{opacity:.65;cursor:wait}.water-source,.water-quality,.water-disclaimer{font-size:11px;line-height:1.65;color:#64748b;overflow-wrap:anywhere}.water-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:12px 0}.water-stat{border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc;padding:10px;min-width:0}.water-stat span{font-size:11px;color:#64748b;display:block}.water-stat strong{font-size:18px;display:block;margin:3px 0;color:#0f172a}.water-stat small{font-size:10px;color:#64748b}.water-stat.water-mean{grid-column:1/-1;background:#eff6ff;border-color:#bfdbfe}.water-stat.water-mean strong{font-size:25px;color:#1e40af}.water-mean small{display:block;line-height:1.6}.water-slider-label{font-size:12px;color:#475569;display:flex;flex-wrap:wrap;gap:5px;justify-content:space-between}.water-slider-label small{font-size:10px;color:#64748b}.water-slider{width:100%;accent-color:#2563eb;min-height:40px;margin:0;touch-action:pan-y}.water-point{display:block;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;color:#1e3a8a;font-size:13px;font-weight:650;line-height:1.8}.water-quality{margin:8px 0 12px}.water-records{border-top:1px solid #e2e8f0;padding-top:10px}.water-records summary{font-size:13px;font-weight:650;cursor:pointer;min-height:34px;line-height:34px}.water-table-wrap{overflow-x:auto}.water-records td,.water-records th{font-size:11px;padding:9px 6px;white-space:nowrap}.water-records tr.chosen td{background:#eff6ff}.water-actions{display:flex;justify-content:space-between;gap:8px;padding-top:10px}.water-actions button:disabled{opacity:.45;cursor:default}.water-chart svg{touch-action:pan-y}.water-disclaimer{margin:12px 0 0}@media(max-width:600px){.water-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.water-stat strong{font-size:17px}.water-detail-card .chart-header{gap:8px;align-items:flex-start}.water-detail-card .trend-badge{font-size:10px;padding:5px 8px}.water-detail-card .chart-container{height:195px}.water-periods button{padding:7px 11px}}
+
+.ai-species-list{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}.ai-species-list span{font-size:12px;font-weight:700;color:#4338ca;background:#eef2ff;padding:5px 9px;border-radius:20px}
+.ai-content:has(.lure-lessons){white-space:normal;background:transparent;padding:0}.advice-meta{white-space:pre-line;font-size:12px;color:var(--text-muted);line-height:1.7;margin:0 0 12px}.advice-summary{font-size:14px;line-height:1.8;background:#f0f7ff;border:1px solid #dbeafe;border-radius:12px;padding:14px;margin:0 0 12px;white-space:pre-line}
+.lure-lessons{display:grid;gap:10px}.lure-lesson{border:1px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fff}.lure-lesson>summary{cursor:pointer;padding:15px 14px;min-height:48px;color:#3730a3;font-size:15px;font-weight:800;list-style-position:inside}.lure-lesson>summary small{font-size:11px;font-weight:500;color:var(--text-muted);margin-left:8px}.lure-lesson[open]>summary{background:#eef2ff;border-bottom:1px solid #e0e7ff}.lure-body{padding:0 14px 14px}.lure-body h4{font-size:12px;color:#4f46e5;margin:15px 0 5px}.lure-body p{font-size:14px;line-height:1.85;margin:0;white-space:pre-line;overflow-wrap:anywhere}
+@media(max-width:600px){.ai-header{align-items:flex-start;gap:10px;flex-wrap:wrap}.btn-ai{min-height:44px}.ai-title{font-size:1rem}.advice-summary{padding:12px}}
+
+.advice-season{font-size:13px;font-weight:800;display:inline-block;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:7px 10px;margin:0 0 10px}.community-basis{margin-top:16px;padding-top:2px;border-top:1px solid #e2e8f0}.community-basis .community-note{font-size:12px;color:#64748b;line-height:1.7}.community-report{padding:10px;background:#f8fafc;border-radius:8px;margin-top:8px}.community-report a{color:#1d4ed8;font-size:13px;font-weight:700;display:inline-block;min-height:30px;padding:4px 0}.community-report small{display:block;font-size:11px;color:#64748b;line-height:1.7;margin:4px 0}.community-report p{font-size:12px;line-height:1.75}.advice-limits{font-size:12px;color:#64748b;line-height:1.8;margin:8px 0 12px;white-space:normal}
+
+/* A measured river scene: level is fixed by the latest 24-hour observations. */
+.river-summary{padding:0 0 15px;overflow:hidden;border:1px solid #dbeafe;border-radius:14px;background:#fff}.river-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 16px 0}.river-eyebrow{display:block;color:#64748b;font-size:11px;margin-bottom:5px}.river-heading h2{font-size:20px;color:#0f172a;margin:0;line-height:1.4}.river-pause{font:inherit;font-size:11px;min-height:40px;padding:7px 10px;background:#fff;border:1px solid #cbd5e1;border-radius:9px;color:#475569;flex-shrink:0;cursor:pointer}.river-scene{margin:8px 12px 0;position:relative;background:#f0f9ff;border-radius:12px;overflow:hidden}.river-scene svg{display:block;width:100%;height:168px}.river-water-fill{fill:#bfdbfe}.river-wave{fill:none;stroke:#38bdf8;stroke-width:3;transform-origin:center}.river-wave-soft{opacity:.42;stroke-width:2}.river-scene .river-arrow{font-size:34px;fill:#1d4ed8;font-weight:800}.river-summary[data-state="unknown"] .river-scene{filter:grayscale(1);background:#f1f5f9}.river-summary[data-state="unknown"] .river-arrow{fill:#94a3b8}.river-summary[data-animate="true"] .river-wave{animation:river-ripple 4.6s ease-in-out infinite}.river-summary[data-animate="true"] .river-wave-soft{animation-duration:6.2s;animation-direction:reverse}.river-summary[data-animate="true"][data-motion="up"] .river-arrow{animation:river-rise 1.8s ease-in-out infinite}.river-summary[data-animate="true"][data-motion="down"] .river-arrow{animation:river-fall 1.8s ease-in-out infinite}.river-scene-note{text-align:center;font-size:10px;color:#64748b;margin:4px 12px 0;line-height:1.6}.river-numbers{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:7px;padding:12px 14px}.river-number{min-width:0}.river-number span{display:block;color:#64748b;font-size:10px;line-height:1.6}.river-number strong{display:block;color:#0f172a;font-size:18px;line-height:1.6;overflow-wrap:anywhere}.river-number:first-child strong{color:#1d4ed8;font-size:24px}.river-factors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 14px}.river-factor{border:1px solid #dbeafe;background:#f8fbff;padding:9px 8px;border-radius:10px;min-width:0}.river-factor span{font-size:10px;color:#64748b;display:block}.river-factor strong{font-size:12px;line-height:1.6;color:#334155;display:block;margin-top:3px;overflow-wrap:anywhere}.river-factor[data-status="missing"]{background:#f8fafc;border-color:#e2e8f0}.river-factor[data-status="missing"] strong{color:#64748b}.river-factor-details{margin:10px 14px 0;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc}.river-factor-details summary{font-size:11px;color:#475569;cursor:pointer;padding:10px;min-height:38px;box-sizing:border-box}.river-factor-details p{font-size:11px;line-height:1.8;color:#475569;padding:0 10px 10px;margin:0;white-space:pre-line;overflow-wrap:anywhere}.river-description{font-size:13px;line-height:1.8;color:#334155;padding:12px 15px 0;margin:0;overflow-wrap:anywhere}.river-peak{font-size:12px;line-height:1.7;color:#1e40af;background:#eff6ff;border-radius:8px;padding:9px 10px;margin:10px 14px 0}.river-footer{flex-wrap:wrap;padding:10px 15px 0;display:flex;align-items:center;justify-content:space-between;gap:8px}.river-source{flex-basis:100%;white-space:pre-line;font-size:10px;color:#64748b;line-height:1.8;overflow-wrap:anywhere}.river-reload{font:inherit;font-size:11px;min-height:42px;padding:8px 11px;border:0;border-radius:9px;background:#2563eb;color:#fff;cursor:pointer;flex-shrink:0}.river-actions{display:flex;gap:8px;width:100%}.river-actions button{flex:1;min-width:0}.river-history{font:inherit;font-size:11px;min-height:42px;padding:8px 10px;border:1px solid #93c5fd;border-radius:9px;background:#eff6ff;color:#1e40af;cursor:pointer}.river-history:disabled{opacity:.65;cursor:wait}.river-reload:disabled{opacity:.65;cursor:wait}.river-request{display:block;padding:8px 15px 0;font-size:11px;line-height:1.7;color:#64748b}.river-request[data-phase="error"]{color:#9a3412}.water-observation-details{margin-top:12px;border-top:1px solid #e2e8f0}.water-observation-details>summary{cursor:pointer;font-size:13px;font-weight:700;color:#334155;padding:14px 0;min-height:44px;box-sizing:border-box}.legacy-water-graph[hidden]{display:none!important}.water-detail-card>.chart-header{display:none}.dash-card.level{display:none}.tab-content:not(.active) .river-summary *{animation-play-state:paused!important}
+@keyframes river-ripple{0%,100%{transform:translateX(-4px)}50%{transform:translateX(4px)}}@keyframes river-rise{0%,100%{transform:translateY(2px)}50%{transform:translateY(-3px)}}@keyframes river-fall{0%,100%{transform:translateY(-2px)}50%{transform:translateY(3px)}}
+@media(prefers-reduced-motion:reduce){.river-summary *{animation:none!important;transition:none!important}}@media(max-width:400px){.river-heading{padding:13px 12px 0}.river-heading h2{font-size:18px}.river-pause{font-size:10px;padding:6px 8px}.river-numbers{padding:10px 12px;gap:6px}.river-number strong{font-size:16px}.river-number:first-child strong{font-size:22px}.river-factors{padding:0 12px}.river-factor{padding:8px 6px}.river-factor strong{font-size:11px}.river-scene svg{height:150px}}
+
+.fishing-brief{margin:18px 0 12px}.fishing-brief-heading{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}.fishing-brief-heading h3{font-size:16px;letter-spacing:-.3px;margin:0;color:#0f172a}.fishing-brief-heading>span{font-size:11px;color:#64748b}.fishing-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.fishing-metric{min-width:0;padding:15px 13px 12px;border:1px solid #dbe4ed;border-radius:15px;background:#fff;position:relative;overflow:hidden}.fishing-metric-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:650;color:#475569;line-height:1.5}.fishing-metric-label svg{width:20px;height:20px;flex-shrink:0}.fishing-metric-value{display:block;font-size:25px;letter-spacing:-.8px;line-height:1.25;margin:12px 0 8px;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a}.fishing-metric p{font-size:11px;line-height:1.6;color:#526174;margin:0;overflow-wrap:anywhere}.fishing-metric.slack{background:#f8fafc}.fishing-metric.slack .fishing-metric-value{font-size:21px;color:#64748b}.fishing-metric.water .fishing-metric-label{color:#1d4ed8}.fishing-metric.water[data-status=rising]{background:#eff6ff;border-color:#bfdbfe}.fishing-metric.water[data-status=rising] .fishing-metric-value{color:#1d4ed8}.fishing-metric.water[data-status=falling]{background:#f0fdfa;border-color:#99f6e4}.fishing-metric.water[data-status=falling] .fishing-metric-value{color:#0f766e}.fishing-metric.rain .fishing-metric-label{color:#6d28d9}.fishing-metric.rain[data-status=wet]{background:#f5f3ff;border-color:#c4b5fd}.fishing-metric.rain[data-status=ready] .fishing-metric-value{color:#6d28d9}.fishing-metric.wind .fishing-metric-label{color:#b45309}.fishing-metric.wind[data-status=strong]{background:#fff7ed;border-color:#fdba74}.fishing-metric.wind[data-status=strong] .fishing-metric-value{color:#c2410c}.wind-scale{display:flex;gap:4px;margin-top:10px}.wind-scale i{display:block;flex:1;height:4px;border-radius:4px;background:#e2e8f0}.wind-scale i.on{background:#d97706}.fishing-next{font-size:11px;line-height:1.6;color:#64748b;margin:9px 1px 0}.fishing-basis{border-top:1px solid #e2e8f0;padding-top:8px}.fishing-basis summary{font-size:12px;color:#64748b;min-height:40px;display:flex;align-items:center;cursor:pointer}.fishing-basis p,.fishing-basis a{font-size:12px;line-height:1.7}.fishing-basis .river-factors{margin:12px 0}.fishing-basis .river-peak{font-size:12px}.fishing-method-note{color:#64748b}.forecast-details{border:1px solid #e2e8f0;background:#fff;border-radius:14px;overflow:hidden;margin:0 0 12px}.forecast-details>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:54px;padding:10px 15px;font-size:14px;font-weight:650;color:#334155;cursor:pointer;box-sizing:border-box;list-style:none}.forecast-details>summary::-webkit-details-marker{display:none}.forecast-details>summary:after{content:'⌄';font-size:20px;color:#64748b;transition:transform .15s}.forecast-details[open]>summary:after{transform:rotate(180deg)}.forecast-details>summary small{margin-left:auto;font-size:11px;font-weight:400;color:#64748b}.forecast-details .dash-card,.forecast-details>.card{margin:0;border:0;border-radius:0;box-shadow:none}.dashboard-grid{grid-template-columns:1fr}.dashboard-grid>.forecast-details{margin-bottom:0}.weather-details .dash-title{display:none}.fishing-basis[open] summary{color:#1d4ed8}@media(max-width:360px){.fishing-metric{padding:12px 10px}.fishing-metric-label{font-size:11px;gap:5px}.fishing-metric-value{font-size:23px}.fishing-metric.slack .fishing-metric-value{font-size:19px}.fishing-metrics{gap:8px}}@media(prefers-reduced-motion:reduce){.forecast-details>summary:after{transition:none}}
+
+.fishing-metric.slack[data-status=predicted]{background:#fff7ed;border-color:#fdba74}.fishing-metric.slack[data-status=predicted] .fishing-metric-value{color:#9a3412}.fishing-metric.slack[data-status=observed]{background:#eff6ff;border-color:#bfdbfe}.fishing-metric.slack[data-status=observed] .fishing-metric-value{color:#1d4ed8}.fishing-metric.slack .fishing-metric-label{font-size:11px}.fishing-metric.slack .fishing-metric-value{font-size:20px}
+
+.fishing-metric.slack[data-status=tide-reference]{background:#f0fdfa;border-color:#99f6e4}.fishing-metric.slack[data-status=tide-reference] .fishing-metric-value{color:#0f766e}.wind-motion{height:44px;margin:7px 0 -3px;color:#d97706;--wind-duration:4s;--wind-bend:3deg}.wind-motion svg{display:block;width:100%;height:44px;overflow:hidden}.wind-motion path{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.wind-motion .wind-ground{stroke:#e2e8f0;stroke-width:1}.wind-motion .wind-leaf{fill:#fef3c7;stroke-width:1.2}.wind-motion .wind-reeds{transform-origin:119px 39px;animation:wind-sway var(--wind-duration) ease-in-out infinite alternate}.wind-motion .gust{opacity:0;animation:wind-drift var(--wind-duration) linear infinite}.wind-motion .gust-b{animation-delay:calc(var(--wind-duration)*-.5)}.wind-motion .gust-c{animation-delay:calc(var(--wind-duration)*-.25)}.wind-motion .gust-d{animation-delay:calc(var(--wind-duration)*-.75)}.wind-motion[data-level="1"]{--wind-duration:4s;--wind-bend:4deg}.wind-motion[data-level="2"]{--wind-duration:2.7s;--wind-bend:9deg}.wind-motion[data-level="3"]{--wind-duration:1.7s;--wind-bend:17deg}.wind-motion[data-level="4"]{--wind-duration:.9s;--wind-bend:27deg;color:#c2410c}.wind-motion[data-level="1"] .gust-c,.wind-motion[data-level="1"] .gust-d,.wind-motion[data-level="2"] .gust-d{display:none}.wind-motion[data-level="0"] .wind-gusts,.wind-motion[data-level=unknown] .wind-gusts{display:none}.wind-motion[data-level="0"] .wind-reeds,.wind-motion[data-level=unknown] .wind-reeds{animation:none}.wind-motion[data-level=unknown]{color:#94a3b8}.wind-motion[data-animate=false] *{animation-play-state:paused!important}@keyframes wind-drift{0%{transform:translateX(-12px);opacity:0}15%{opacity:.8}80%{opacity:.6}100%{transform:translateX(140px);opacity:0}}@keyframes wind-sway{from{transform:skewX(calc(var(--wind-bend)*-.3))}to{transform:skewX(var(--wind-bend))}}@media(prefers-reduced-motion:reduce){.wind-motion *{animation:none!important}.wind-motion .gust{opacity:.45;transform:translateX(36px)}}
+
+.fishing-metric.slack[role=button]{cursor:pointer;touch-action:manipulation}.fishing-metric.slack[role=button]:focus-visible{outline:3px solid #2563eb;outline-offset:3px}.water-timeline-hint{display:block;margin-top:10px;font-size:11px;font-weight:650;color:#0f766e}.water-timeline-dialog{width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;border:1px solid #dbe4ed;border-radius:20px;background:#fff;color:#0f172a;box-sizing:border-box;box-shadow:0 20px 70px #0f172a40}.water-timeline-dialog::backdrop{background:#0f172a88}.water-timeline-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:16px 16px 6px}.water-timeline-header h2{font-size:18px;letter-spacing:-.5px;margin:0}.water-timeline-header button{width:44px;height:44px;border:0;border-radius:12px;background:#f1f5f9;color:#475569;font-size:18px;cursor:pointer}.water-timeline-dialog>p{margin:3px 16px 10px;font-size:12px;line-height:1.6;color:#526174;overflow-wrap:anywhere}.water-timeline-dialog .water-timeline-range{color:#0f766e;font-size:11px}.water-timeline-scroll{overflow:auto;max-height:47dvh;min-height:100px;overscroll-behavior:contain;border-block:1px solid #e2e8f0}.water-timeline-dialog table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.water-timeline-dialog caption{font-size:10px;text-align:left;padding:8px 12px;color:#64748b}.water-timeline-dialog th{position:sticky;top:0;background:#f8fafc;text-align:right;padding:11px 9px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0}.water-timeline-dialog td{text-align:right;padding:11px 9px;border-bottom:1px solid #f1f5f9}.water-timeline-dialog th:first-child,.water-timeline-dialog td:first-child{text-align:left;padding-left:14px}.water-timeline-dialog tr[data-trend=up] td:nth-child(n+3){color:#2563eb}.water-timeline-dialog tr[data-trend=down] td:nth-child(n+3){color:#0f766e}.water-timeline-dialog tr[data-trend=missing]{color:#94a3b8}.water-timeline-footer{padding:13px 16px;display:flex;flex-direction:column;gap:10px}.water-timeline-footer small{font-size:11px;line-height:1.6;color:#64748b}.water-timeline-footer button{border:0;border-radius:11px;padding:13px;background:#2563eb;color:#fff;font:600 13px inherit;min-height:44px;cursor:pointer}.water-timeline-footer button:disabled{opacity:.55;cursor:wait}@media(max-width:360px){.water-timeline-dialog th,.water-timeline-dialog td{font-size:11px;padding-inline:6px}.water-timeline-header h2{font-size:16px}}
+</style>
+<meta name="theme-color" content="#2563eb"><link rel="icon" href="/favicon.svg"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="한강 낚시"><meta name="apple-mobile-web-app-status-bar-style" content="default"></head>
+<body>
+    <div class="container">
+        <header class="app-heading"><div><h1>🎣 한강 낚시</h1><p>지도와 움직임으로 보는 오늘의 한강</p></div><button type="button" class="install-open" id="install-open">＋ 앱 설치</button></header>
+
+        <div class="toolbar connection-bar"><span id="global-status" role="status">수위 15분 지연 기준 · 10분마다 새로 확인</span><button id="refresh" type="button">새로고침</button></div>
+
+
+<!-- 탭 메뉴 -->
+        <p class="small">지도에서 구역을 선택하세요. 수위는 10분 관측, 날씨는 시간별 자료이며 관측 시각을 함께 표시합니다.</p><div class="tab-menu">
+            <button class="tab-button active" onclick="openTab(event, 'ttukseom')">뚝섬</button>
+            <button class="tab-button" onclick="openTab(event, 'yanghwa')">양화</button>
+            <button class="tab-button" onclick="openTab(event, 'mangwon')">망원</button>
+            <button class="tab-button" onclick="openTab(event, 'banpo')">반포</button>
+        </div>
+
+        <!-- 🗺️ 한강 포인트 금지구역 상세 지도 -->
+        <div class="card map-card">
+            <div class="map-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-5.447a8 8 0 0111.314-11.314L20 9m-11 11v-9m0 9l5.447-5.447a8 8 0 00-11.314 0L9 20z"></path></svg>
+                한강 구역 선택 · 위치 개략도
+            </div>
+            <div class="map-container">
+                <svg class="map-river-svg" viewBox="0 0 1000 450" preserveAspectRatio="none">
+                    <defs>
+                        <pattern id="forbidden-pattern" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                            <line x1="0" y1="0" x2="0" y2="12" stroke="#ef4444" stroke-width="4" opacity="0.6" />
+                        </pattern>
+                    </defs>
+                    <path d="M 1100,100 C 950,100 850,220 700,220 C 550,220 500,320 400,320 C 280,320 250,200 150,200 C 50,200 0,150 -50,150" fill="none" stroke="#e0f2fe" stroke-width="140" stroke-linecap="round" />
+                    <path d="M 1100,100 C 950,100 850,220 700,220 C 550,220 500,320 400,320 C 280,320 250,200 150,200 C 50,200 0,150 -50,150" fill="none" stroke="#bae6fd" stroke-width="100" stroke-linecap="round" />
+
+                    <ellipse cx="280" cy="240" rx="80" ry="25" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" />
+                    <text x="280" y="244" font-size="32" fill="#94a3b8" font-weight="bold" text-anchor="middle">여의도</text>
+
+                    <!-- 대교 -->
+                    <line x1="100" y1="120" x2="100" y2="260" stroke="#cbd5e1" stroke-width="4"/>
+                    <line x1="180" y1="130" x2="180" y2="280" stroke="#cbd5e1" stroke-width="4"/><text x="180" y="120" font-size="32" fill="#64748b" text-anchor="middle">양화대교</text>
+                    <line x1="430" y1="250" x2="430" y2="390" stroke="#cbd5e1" stroke-width="4"/><text x="430" y="240" font-size="32" fill="#64748b" text-anchor="middle">반포대교</text>
+                    <line x1="680" y1="150" x2="680" y2="290" stroke="#cbd5e1" stroke-width="4"/><text x="680" y="140" font-size="32" fill="#64748b" text-anchor="middle">동호대교</text>
+                    <line x1="850" y1="100" x2="850" y2="240" stroke="#cbd5e1" stroke-width="4"/><text x="850" y="90" font-size="32" fill="#64748b" text-anchor="middle">청담대교</text>
+
+                </svg>
+
+                <div role="button" tabindex="0" class="map-marker" id="marker_mangwon" style="left: 13%; top: 40%;"><div class="marker-dot"></div><div class="marker-label">망원</div></div>
+                <div role="button" tabindex="0" class="map-marker" id="marker_yanghwa" style="left: 20%; top: 49%;"><div class="marker-dot"></div><div class="marker-label">양화</div></div>
+                <div role="button" tabindex="0" class="map-marker" id="marker_banpo" style="left: 43%; top: 73%;"><div class="marker-dot"></div><div class="marker-label">반포</div></div>
+                <div role="button" tabindex="0" class="map-marker active" id="marker_ttukseom" style="left: 83%; top: 33%;"><div class="marker-dot"></div><div class="marker-label">뚝섬</div></div>
+            </div>
+        </div>
+
+        <details class="map-help"><summary>지도 안내 · 낚시금지구역 확인</summary><strong>낚시구역은 공식 안내에서 확인하세요.</strong><p>위 그림은 구역 선택용 개략도이며 실제 좌표·금지구역 경계·현재 위치를 나타내지 않습니다. 서울시 안내에는 선유도공원 전체와 뚝섬·망원·반포의 일부 구간 등이 금지구역으로 기재되어 있습니다. 공원 이름만으로 낚시 가능 여부를 판단할 수 없습니다.</p><a href="https://hangang.seoul.go.kr/files/2016/12/58461c89b5f2b9.43689767.pdf" target="_blank" rel="noopener">서울시 금지구역 안내도</a> · <a href="https://hangang.seoul.go.kr/www/contents/646.do?mid=427" target="_blank" rel="noopener">한강공원 공식 이용 규정</a><p class="small">자료 확인: 2026-09-30. 최신 고시와 현장 안내판, 공원 안내센터에서 해당 지점을 다시 확인하세요.</p></details>
+<!-- ==================== 뚝섬 탭 ==================== -->
+        <div id="ttukseom" class="tab-content active">
+
+            <div class="card water-detail-card" style="margin-bottom:20px">
+ <div class="chart-header"><div class="chart-title">지금 한강 · 낚시 조건</div><span class="trend-badge" id="trend_ttukseom">자료 확인 중</span></div>
+<section class="river-summary" id="river_summary_ttukseom" data-state="unknown" data-motion="paused" data-animate="false" aria-label="한강 수위 종합 분석">
+ <div class="river-heading"><div><span class="river-eyebrow" id="river_profile_ttukseom">최근 6시간 빠른 종합</span><h2 id="river_title_ttukseom">현재 수위 확인 중</h2></div><button type="button" class="river-pause" data-river-pause="ttukseom" aria-pressed="false">움직임 멈춤</button></div>
+ <div class="river-scene"><svg viewBox="0 0 400 180" role="img" id="river_scene_ttukseom" aria-label="수위 자료 확인 중"><defs><clipPath id="river_basin_ttukseom"><path d="M26 43 Q48 150 96 156 H304 Q354 150 374 43 Z"/></clipPath></defs><path d="M0 44H26Q48 150 96 156H304Q354 150 374 44H400V180H0Z" fill="#e2e8f0"/><g clip-path="url(#river_basin_ttukseom)"><rect id="river_fill_ttukseom" class="river-water-fill" x="0" y="104" width="400" height="76"/><path id="river_wave_ttukseom" class="river-wave" d="M-10 104 Q15 99 40 104 T90 104 T140 104 T190 104 T240 104 T290 104 T340 104 T390 104 T440 104"/><path id="river_wave_soft_ttukseom" class="river-wave river-wave-soft" d="M-10 114 Q15 111 40 114 T90 114 T140 114 T190 114 T240 114 T290 114 T340 114 T390 114 T440 114"/></g><path d="M54 54H346M82 54V96M318 54V96" stroke="#cbd5e1" stroke-width="5" fill="none"/><path d="M103 54Q151 24 200 54Q250 24 297 54" stroke="#94a3b8" stroke-width="3" fill="none"/><text x="200" y="132" text-anchor="middle" class="river-arrow" id="river_arrow_ttukseom">—</text></svg></div>
+ <p class="river-scene-note" id="river_scale_ttukseom">장면 높이는 최근 24시간 관측 범위의 상대 위치 · 실제 수심 아님</p>
+ <div class="river-numbers"><div class="river-number"><span>관측소 수위</span><strong id="river_level_ttukseom">— m</strong></div><div class="river-number"><span>1시간 변화</span><strong id="river_change_ttukseom">비교 중</strong></div><div class="river-number"><span id="river_average_label_ttukseom">직전 1시간 평균</span><strong id="river_average_ttukseom">— m</strong></div></div>
+<section class="fishing-brief" id="fishing_brief_ttukseom" aria-label="낚시 조건 한눈에 보기"><div class="fishing-brief-heading"><h3>지금 낚시 체크</h3><span>관측 · 예보</span></div><div class="fishing-metrics" aria-live="polite"><article class="fishing-metric slack" id="fishing_card_slack_ttukseom" role="button" tabindex="0" data-water-timeline="ttukseom" aria-haspopup="dialog" aria-labelledby="fishing_slack_label_ttukseom fishing_slack_ttukseom fishing_timeline_hint_ttukseom" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8c3-4 5 4 8 0s5 4 10 0M3 16c3-4 5 4 8 0s5 4 10 0"/></svg><span id="fishing_slack_label_ttukseom">물돌이 참고 · 수위 추정</span></div><strong class="fishing-metric-value" id="fishing_slack_ttukseom">관측 보강 중</strong><p id="fishing_slack_note_ttukseom">직전 1시간 수위로 계산</p><span class="water-timeline-hint" id="fishing_timeline_hint_ttukseom">6시간 수위표 보기 ›</span></article><article class="fishing-metric water" id="fishing_card_water_ttukseom" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18V7m-3 3 3-3 3 3M12 17c3-3 5 3 9 0M12 12h9"/></svg><span>직전 1시간 수위</span></div><strong class="fishing-metric-value" id="fishing_water_ttukseom">확인 중</strong><p id="fishing_water_note_ttukseom">직전 1시간 실측 비교 중</p></article><article class="fishing-metric rain" id="fishing_card_rain_ttukseom" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 14a4 4 0 1 1 1-8 5 5 0 0 1 9 2 3 3 0 0 1 0 6H7m1 3-1 3m6-3-1 3m6-3-1 3"/></svg><span>5시간 내 강수</span></div><strong class="fishing-metric-value" id="fishing_rain_ttukseom">—%</strong><p id="fishing_rain_note_ttukseom">시간별 강수확률 확인 중</p></article><article class="fishing-metric wind" id="fishing_card_wind_ttukseom" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h5"/></svg><span>현재 바람</span></div><strong class="fishing-metric-value" id="fishing_wind_ttukseom">확인 중</strong><p id="fishing_wind_note_ttukseom">기상청 실황 확인 중</p><div class="wind-motion" id="fishing_wind_motion_ttukseom" data-level="unknown" data-animate="false" role="img" aria-label="풍속 자료 확인 중"><svg viewBox="0 0 160 44" aria-hidden="true" focusable="false"><path class="wind-ground" d="M8 39h144"/><g class="wind-reeds"><path d="M119 38q-1-15-8-23M119 38q2-18 12-27M119 38q9-11 17-12"/><path class="wind-leaf" d="M111 15q-9-1-8-9 8 0 8 9M131 11q-1-8 6-9 2 7-6 9M136 26q3-7 10-6-2 7-10 6"/></g><g class="wind-gusts"><path class="gust gust-a" d="M-20 13h47q8 0 8-5t-6-5"/><path class="gust gust-b" d="M-30 26h70q12 0 12 7t-8 6"/><path class="gust gust-c" d="M-40 20h48"/><path class="gust gust-d" d="M-10 7h40"/></g></svg></div><div class="wind-scale" id="fishing_wind_scale_ttukseom" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></article></div><p class="fishing-next" id="fishing_water_next_ttukseom">직전 1시간 수위 기준 · 실제 물돌이 미확인</p></section>
+ <details class="river-factor-details fishing-basis"><summary>관측·분석 근거</summary><p id="fishing_turn_detail_ttukseom">최신 10분 관측 7개로 수위 전환 후보를 계산합니다.</p><p class="river-description" id="river_description_ttukseom" aria-live="polite">실제 관측으로 수위의 오르내림과 영향을 함께 확인합니다.</p><div class="river-factors" id="river_factors_ttukseom"><div class="river-factor" data-status="missing"><span>조석 참고</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>팔당 방류</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>강수</span><strong>자료 확인 중</strong></div></div><p id="river_factor_detail_ttukseom">관측 자료를 확인 중입니다.</p><p class="river-peak" id="river_peak_ttukseom" hidden></p><p class="fishing-method-note">강수는 앞으로 5개 시간별 예보의 최대 확률입니다. 5시간 전체의 비 올 확률을 합산한 값은 아닙니다. 바람은 앱의 낚시용 구분으로 없음 &lt;0.3 / 조금 &lt;1.6 / 약간 &lt;3.4 / 중간 &lt;8 / 강풍 ≥8 m/s이며 공식 강풍특보 등급과 다릅니다. 수위 전환 후보는 최신 관측 직전 1시간의 곡선을 연장한 실험 추정입니다. 7개 관측과 감속 일관성이 있을 때만 1시간 이내 후보를 계산합니다. 표시 여유 ±20분은 통계적 신뢰구간이 아닙니다. 실제 유속 반전인 물돌이 예보가 아니며, 낮은 정확도로 낚시 시점을 확정하는 데 쓸 수 없습니다.</p><a href="https://www.tidesandcurrents.noaa.gov/faq.html" target="_blank" rel="noopener">조석과 물돌이 시각의 차이 · NOAA</a></details>
+ <div class="river-footer"><span class="river-source" id="river_source_ttukseom">공식 자료 연결 중</span><div class="river-actions"><button type="button" class="river-reload" data-river-reload="ttukseom">빠른 종합 다시 조회</button><button type="button" class="river-history" data-river-history="ttukseom">24시간 정밀 분석</button></div></div><output class="river-request" id="river_request_ttukseom" role="status" aria-live="polite">수위 종합 자료를 확인합니다.</output>
+ </section>
+<details class="water-observation-details"><summary>관측 상세 보기 · 기간 · 평균 · 10분 내역</summary>
+ <div class="water-periods" role="group" aria-label="수위 조회 기간"><button type="button" data-water-zone="ttukseom" data-water-hours="6" aria-pressed="true" class="active">6시간</button><button type="button" data-water-zone="ttukseom" data-water-hours="24" aria-pressed="false" class="">24시간</button><button type="button" data-water-zone="ttukseom" data-water-hours="72" aria-pressed="false" class="">3일</button><button type="button" class="water-reload" data-water-reload="ttukseom">공식 자료 다시 조회</button></div>
+ <output class="water-request-status" id="water_status_ttukseom" role="status" aria-live="polite">공식 관측 자료 조회를 준비합니다.</output>
+ <div class="water-source" id="water_source_ttukseom">HRFCO · 10분 관측 자료를 확인합니다.</div>
+ <div class="water-stats" id="water_stats_ttukseom"></div>
+ <div class="chart-container legacy-water-graph" hidden aria-hidden="true"><div id="chart_ttukseom" class="water-chart" role="img" aria-label="관측 수위 추이"></div></div>
+ <label class="water-slider-label" for="water_slider_ttukseom">관측 시각 선택 <small>아래 막대를 움직여 실제 관측값을 확인하세요</small></label>
+ <input class="water-slider" id="water_slider_ttukseom" data-water-slider="ttukseom" type="range" min="0" max="0" value="0" step="1" disabled>
+ <output class="water-point" id="water_point_ttukseom" aria-live="polite">관측 자료 조회 중…</output>
+ <div class="water-quality" id="water_quality_ttukseom"></div>
+ <details class="water-records"><summary>10분별 관측 내역</summary><div class="water-table-wrap"><table><thead><tr><th>관측 시각 (KST)</th><th>수위</th><th>직전 대비</th></tr></thead><tbody id="water_table_ttukseom"><tr><td colspan="3">조회 중…</td></tr></tbody></table></div><div class="water-actions"><button type="button" data-water-more="ttukseom" id="water_more_ttukseom" hidden>12건 더 보기</button><button type="button" data-water-csv="ttukseom" id="water_csv_ttukseom" disabled>CSV 저장</button></div></details>
+ <p class="water-disclaimer">관측소 기준 수위(m)이며 공원의 수심이 아닙니다. 선택 기간의 실제 관측만 표시하며 누락값은 평균에서 제외합니다.</p>
+ </details>
+</div>
+
+
+            <!-- 실시간 위젯 그룹 -->
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">청담대교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_ttukseom">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_ttukseom">분석 중...</div>
+                        <div class="dash-update" id="time_level_ttukseom">업데이트 중...</div>
+                    </div>
+                </div>
+
+                <details class="forecast-details weather-details" id="weather_details_ttukseom"><summary><span>기상청 날씨 · 시간별/일별 예보</span><small>상세 보기</small></summary><div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 날씨 · 시간별/일별 예보</div><div class="weather-outlook" id="weather_periods_ttukseom" aria-live="polite"><div class="weather-mini"><b>3시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>5시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>내일</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>모레</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div></div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_ttukseom">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_ttukseom">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_ttukseom">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_ttukseom">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_ttukseom"></div>
+                    <div class="dash-update" id="time_weather_ttukseom" style="text-align:right;">업데이트 중...</div>
+                </div></details>
+            </div>
+
+            <!-- 인천 조석 참고 -->
+            <details class="forecast-details tide-details" id="tide_details_ttukseom"><summary><span>오늘 조석 · 인천</span><small>상세 보기</small></summary><div class="card">
+                <div class="table-header-area">
+                    <div class="today-date" id="date_ttukseom">YYYY. MM. DD. 물때</div>
+                </div>
+                <div class="tide-summary" id="tide_summary_ttukseom" aria-live="polite">오늘 조석 예보 조회 중…</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>구분</th>
+                                <th>시각</th>
+                                <th>조위</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tide_ttukseom"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 기준 조위·조차이며 한강 현장 수위 변화량이나 물때 도착 시각으로 환산하지 않습니다.</div>
+            </div></details>
+
+            <!-- AI 낚시 조언가 카드 -->
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🎣 어종별 루어낚시 강의</div>
+                    <button class="btn-ai" onclick="getAIAdvice('ttukseom')" id="btn_ai_ttukseom">✨ 5종 루어 강의 받기</button>
+                </div>
+                <div class="ai-basis" id="ai_basis_ttukseom" aria-live="polite">사용할 자료 확인 중…</div>
+                <div class="ai-species-list" aria-label="강의 대상어"><span>쏘가리</span><span>점농어</span><span>메기</span><span>강준치</span><span>배스</span></div>
+                <div class="ai-content" id="ai_result_ttukseom">
+                    현재 기온·바람·수위와 인천 조석을 참고해 쏘가리·점농어·메기·강준치·배스의 루어 선택, 캐스팅과 릴링, 반응 없을 때의 조정 방법을 각각 설명합니다. 기온과 수온, 인천 조석과 한강 현장 흐름은 구분합니다.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== 양화 탭 ==================== -->
+        <div id="yanghwa" class="tab-content">
+            <div class="card water-detail-card" style="margin-bottom:20px">
+ <div class="chart-header"><div class="chart-title">지금 한강 · 낚시 조건</div><span class="trend-badge" id="trend_yanghwa">자료 확인 중</span></div>
+<section class="river-summary" id="river_summary_yanghwa" data-state="unknown" data-motion="paused" data-animate="false" aria-label="한강 수위 종합 분석">
+ <div class="river-heading"><div><span class="river-eyebrow" id="river_profile_yanghwa">최근 6시간 빠른 종합</span><h2 id="river_title_yanghwa">현재 수위 확인 중</h2></div><button type="button" class="river-pause" data-river-pause="yanghwa" aria-pressed="false">움직임 멈춤</button></div>
+ <div class="river-scene"><svg viewBox="0 0 400 180" role="img" id="river_scene_yanghwa" aria-label="수위 자료 확인 중"><defs><clipPath id="river_basin_yanghwa"><path d="M26 43 Q48 150 96 156 H304 Q354 150 374 43 Z"/></clipPath></defs><path d="M0 44H26Q48 150 96 156H304Q354 150 374 44H400V180H0Z" fill="#e2e8f0"/><g clip-path="url(#river_basin_yanghwa)"><rect id="river_fill_yanghwa" class="river-water-fill" x="0" y="104" width="400" height="76"/><path id="river_wave_yanghwa" class="river-wave" d="M-10 104 Q15 99 40 104 T90 104 T140 104 T190 104 T240 104 T290 104 T340 104 T390 104 T440 104"/><path id="river_wave_soft_yanghwa" class="river-wave river-wave-soft" d="M-10 114 Q15 111 40 114 T90 114 T140 114 T190 114 T240 114 T290 114 T340 114 T390 114 T440 114"/></g><path d="M54 54H346M82 54V96M318 54V96" stroke="#cbd5e1" stroke-width="5" fill="none"/><path d="M103 54Q151 24 200 54Q250 24 297 54" stroke="#94a3b8" stroke-width="3" fill="none"/><text x="200" y="132" text-anchor="middle" class="river-arrow" id="river_arrow_yanghwa">—</text></svg></div>
+ <p class="river-scene-note" id="river_scale_yanghwa">장면 높이는 최근 24시간 관측 범위의 상대 위치 · 실제 수심 아님</p>
+ <div class="river-numbers"><div class="river-number"><span>관측소 수위</span><strong id="river_level_yanghwa">— m</strong></div><div class="river-number"><span>1시간 변화</span><strong id="river_change_yanghwa">비교 중</strong></div><div class="river-number"><span id="river_average_label_yanghwa">직전 1시간 평균</span><strong id="river_average_yanghwa">— m</strong></div></div>
+<section class="fishing-brief" id="fishing_brief_yanghwa" aria-label="낚시 조건 한눈에 보기"><div class="fishing-brief-heading"><h3>지금 낚시 체크</h3><span>관측 · 예보</span></div><div class="fishing-metrics" aria-live="polite"><article class="fishing-metric slack" id="fishing_card_slack_yanghwa" role="button" tabindex="0" data-water-timeline="yanghwa" aria-haspopup="dialog" aria-labelledby="fishing_slack_label_yanghwa fishing_slack_yanghwa fishing_timeline_hint_yanghwa" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8c3-4 5 4 8 0s5 4 10 0M3 16c3-4 5 4 8 0s5 4 10 0"/></svg><span id="fishing_slack_label_yanghwa">물돌이 참고 · 수위 추정</span></div><strong class="fishing-metric-value" id="fishing_slack_yanghwa">관측 보강 중</strong><p id="fishing_slack_note_yanghwa">직전 1시간 수위로 계산</p><span class="water-timeline-hint" id="fishing_timeline_hint_yanghwa">6시간 수위표 보기 ›</span></article><article class="fishing-metric water" id="fishing_card_water_yanghwa" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18V7m-3 3 3-3 3 3M12 17c3-3 5 3 9 0M12 12h9"/></svg><span>직전 1시간 수위</span></div><strong class="fishing-metric-value" id="fishing_water_yanghwa">확인 중</strong><p id="fishing_water_note_yanghwa">직전 1시간 실측 비교 중</p></article><article class="fishing-metric rain" id="fishing_card_rain_yanghwa" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 14a4 4 0 1 1 1-8 5 5 0 0 1 9 2 3 3 0 0 1 0 6H7m1 3-1 3m6-3-1 3m6-3-1 3"/></svg><span>5시간 내 강수</span></div><strong class="fishing-metric-value" id="fishing_rain_yanghwa">—%</strong><p id="fishing_rain_note_yanghwa">시간별 강수확률 확인 중</p></article><article class="fishing-metric wind" id="fishing_card_wind_yanghwa" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h5"/></svg><span>현재 바람</span></div><strong class="fishing-metric-value" id="fishing_wind_yanghwa">확인 중</strong><p id="fishing_wind_note_yanghwa">기상청 실황 확인 중</p><div class="wind-motion" id="fishing_wind_motion_yanghwa" data-level="unknown" data-animate="false" role="img" aria-label="풍속 자료 확인 중"><svg viewBox="0 0 160 44" aria-hidden="true" focusable="false"><path class="wind-ground" d="M8 39h144"/><g class="wind-reeds"><path d="M119 38q-1-15-8-23M119 38q2-18 12-27M119 38q9-11 17-12"/><path class="wind-leaf" d="M111 15q-9-1-8-9 8 0 8 9M131 11q-1-8 6-9 2 7-6 9M136 26q3-7 10-6-2 7-10 6"/></g><g class="wind-gusts"><path class="gust gust-a" d="M-20 13h47q8 0 8-5t-6-5"/><path class="gust gust-b" d="M-30 26h70q12 0 12 7t-8 6"/><path class="gust gust-c" d="M-40 20h48"/><path class="gust gust-d" d="M-10 7h40"/></g></svg></div><div class="wind-scale" id="fishing_wind_scale_yanghwa" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></article></div><p class="fishing-next" id="fishing_water_next_yanghwa">직전 1시간 수위 기준 · 실제 물돌이 미확인</p></section>
+ <details class="river-factor-details fishing-basis"><summary>관측·분석 근거</summary><p id="fishing_turn_detail_yanghwa">최신 10분 관측 7개로 수위 전환 후보를 계산합니다.</p><p class="river-description" id="river_description_yanghwa" aria-live="polite">실제 관측으로 수위의 오르내림과 영향을 함께 확인합니다.</p><div class="river-factors" id="river_factors_yanghwa"><div class="river-factor" data-status="missing"><span>조석 참고</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>팔당 방류</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>강수</span><strong>자료 확인 중</strong></div></div><p id="river_factor_detail_yanghwa">관측 자료를 확인 중입니다.</p><p class="river-peak" id="river_peak_yanghwa" hidden></p><p class="fishing-method-note">강수는 앞으로 5개 시간별 예보의 최대 확률입니다. 5시간 전체의 비 올 확률을 합산한 값은 아닙니다. 바람은 앱의 낚시용 구분으로 없음 &lt;0.3 / 조금 &lt;1.6 / 약간 &lt;3.4 / 중간 &lt;8 / 강풍 ≥8 m/s이며 공식 강풍특보 등급과 다릅니다. 수위 전환 후보는 최신 관측 직전 1시간의 곡선을 연장한 실험 추정입니다. 7개 관측과 감속 일관성이 있을 때만 1시간 이내 후보를 계산합니다. 표시 여유 ±20분은 통계적 신뢰구간이 아닙니다. 실제 유속 반전인 물돌이 예보가 아니며, 낮은 정확도로 낚시 시점을 확정하는 데 쓸 수 없습니다.</p><a href="https://www.tidesandcurrents.noaa.gov/faq.html" target="_blank" rel="noopener">조석과 물돌이 시각의 차이 · NOAA</a></details>
+ <div class="river-footer"><span class="river-source" id="river_source_yanghwa">공식 자료 연결 중</span><div class="river-actions"><button type="button" class="river-reload" data-river-reload="yanghwa">빠른 종합 다시 조회</button><button type="button" class="river-history" data-river-history="yanghwa">24시간 정밀 분석</button></div></div><output class="river-request" id="river_request_yanghwa" role="status" aria-live="polite">수위 종합 자료를 확인합니다.</output>
+ </section>
+<details class="water-observation-details"><summary>관측 상세 보기 · 기간 · 평균 · 10분 내역</summary>
+ <div class="water-periods" role="group" aria-label="수위 조회 기간"><button type="button" data-water-zone="yanghwa" data-water-hours="6" aria-pressed="true" class="active">6시간</button><button type="button" data-water-zone="yanghwa" data-water-hours="24" aria-pressed="false" class="">24시간</button><button type="button" data-water-zone="yanghwa" data-water-hours="72" aria-pressed="false" class="">3일</button><button type="button" class="water-reload" data-water-reload="yanghwa">공식 자료 다시 조회</button></div>
+ <output class="water-request-status" id="water_status_yanghwa" role="status" aria-live="polite">공식 관측 자료 조회를 준비합니다.</output>
+ <div class="water-source" id="water_source_yanghwa">HRFCO · 10분 관측 자료를 확인합니다.</div>
+ <div class="water-stats" id="water_stats_yanghwa"></div>
+ <div class="chart-container legacy-water-graph" hidden aria-hidden="true"><div id="chart_yanghwa" class="water-chart" role="img" aria-label="관측 수위 추이"></div></div>
+ <label class="water-slider-label" for="water_slider_yanghwa">관측 시각 선택 <small>아래 막대를 움직여 실제 관측값을 확인하세요</small></label>
+ <input class="water-slider" id="water_slider_yanghwa" data-water-slider="yanghwa" type="range" min="0" max="0" value="0" step="1" disabled>
+ <output class="water-point" id="water_point_yanghwa" aria-live="polite">관측 자료 조회 중…</output>
+ <div class="water-quality" id="water_quality_yanghwa"></div>
+ <details class="water-records"><summary>10분별 관측 내역</summary><div class="water-table-wrap"><table><thead><tr><th>관측 시각 (KST)</th><th>수위</th><th>직전 대비</th></tr></thead><tbody id="water_table_yanghwa"><tr><td colspan="3">조회 중…</td></tr></tbody></table></div><div class="water-actions"><button type="button" data-water-more="yanghwa" id="water_more_yanghwa" hidden>12건 더 보기</button><button type="button" data-water-csv="yanghwa" id="water_csv_yanghwa" disabled>CSV 저장</button></div></details>
+ <p class="water-disclaimer">관측소 기준 수위(m)이며 공원의 수심이 아닙니다. 선택 기간의 실제 관측만 표시하며 누락값은 평균에서 제외합니다.</p>
+ </details>
+</div>
+
+
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">한강대교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_yanghwa">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_yanghwa">분석 중...</div>
+                        <div class="dash-update" id="time_level_yanghwa">업데이트 중...</div>
+                    </div>
+                </div>
+
+                <details class="forecast-details weather-details" id="weather_details_yanghwa"><summary><span>기상청 날씨 · 시간별/일별 예보</span><small>상세 보기</small></summary><div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 날씨 · 시간별/일별 예보</div><div class="weather-outlook" id="weather_periods_yanghwa" aria-live="polite"><div class="weather-mini"><b>3시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>5시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>내일</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>모레</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div></div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_yanghwa">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_yanghwa">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_yanghwa">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_yanghwa">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_yanghwa"></div>
+                    <div class="dash-update" id="time_weather_yanghwa" style="text-align:right;">업데이트 중...</div>
+                </div></details>
+            </div>
+
+            <details class="forecast-details tide-details" id="tide_details_yanghwa"><summary><span>오늘 조석 · 인천</span><small>상세 보기</small></summary><div class="card">
+                <div class="table-header-area">
+                    <div class="today-date" id="date_yanghwa">YYYY. MM. DD. 물때</div>
+                </div>
+                <div class="tide-summary" id="tide_summary_yanghwa" aria-live="polite">오늘 조석 예보 조회 중…</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>구분</th><th>시각</th><th>조위</th><th>상태</th></tr>
+                        </thead>
+                        <tbody id="tide_yanghwa"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 기준 조위·조차이며 한강 현장 수위 변화량이나 물때 도착 시각으로 환산하지 않습니다.</div>
+            </div></details>
+
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🎣 어종별 루어낚시 강의</div>
+                    <button class="btn-ai" onclick="getAIAdvice('yanghwa')" id="btn_ai_yanghwa">✨ 5종 루어 강의 받기</button>
+                </div>
+                <div class="ai-basis" id="ai_basis_yanghwa" aria-live="polite">사용할 자료 확인 중…</div>
+                <div class="ai-species-list" aria-label="강의 대상어"><span>쏘가리</span><span>점농어</span><span>메기</span><span>강준치</span><span>배스</span></div>
+                <div class="ai-content" id="ai_result_yanghwa">
+                    현재 기온·바람·수위와 인천 조석을 참고해 쏘가리·점농어·메기·강준치·배스의 루어 선택, 캐스팅과 릴링, 반응 없을 때의 조정 방법을 각각 설명합니다. 기온과 수온, 인천 조석과 한강 현장 흐름은 구분합니다.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== 망원 탭 ==================== -->
+        <div id="mangwon" class="tab-content">
+            <div class="card water-detail-card" style="margin-bottom:20px">
+ <div class="chart-header"><div class="chart-title">지금 한강 · 낚시 조건</div><span class="trend-badge" id="trend_mangwon">자료 확인 중</span></div>
+<section class="river-summary" id="river_summary_mangwon" data-state="unknown" data-motion="paused" data-animate="false" aria-label="한강 수위 종합 분석">
+ <div class="river-heading"><div><span class="river-eyebrow" id="river_profile_mangwon">최근 6시간 빠른 종합</span><h2 id="river_title_mangwon">현재 수위 확인 중</h2></div><button type="button" class="river-pause" data-river-pause="mangwon" aria-pressed="false">움직임 멈춤</button></div>
+ <div class="river-scene"><svg viewBox="0 0 400 180" role="img" id="river_scene_mangwon" aria-label="수위 자료 확인 중"><defs><clipPath id="river_basin_mangwon"><path d="M26 43 Q48 150 96 156 H304 Q354 150 374 43 Z"/></clipPath></defs><path d="M0 44H26Q48 150 96 156H304Q354 150 374 44H400V180H0Z" fill="#e2e8f0"/><g clip-path="url(#river_basin_mangwon)"><rect id="river_fill_mangwon" class="river-water-fill" x="0" y="104" width="400" height="76"/><path id="river_wave_mangwon" class="river-wave" d="M-10 104 Q15 99 40 104 T90 104 T140 104 T190 104 T240 104 T290 104 T340 104 T390 104 T440 104"/><path id="river_wave_soft_mangwon" class="river-wave river-wave-soft" d="M-10 114 Q15 111 40 114 T90 114 T140 114 T190 114 T240 114 T290 114 T340 114 T390 114 T440 114"/></g><path d="M54 54H346M82 54V96M318 54V96" stroke="#cbd5e1" stroke-width="5" fill="none"/><path d="M103 54Q151 24 200 54Q250 24 297 54" stroke="#94a3b8" stroke-width="3" fill="none"/><text x="200" y="132" text-anchor="middle" class="river-arrow" id="river_arrow_mangwon">—</text></svg></div>
+ <p class="river-scene-note" id="river_scale_mangwon">장면 높이는 최근 24시간 관측 범위의 상대 위치 · 실제 수심 아님</p>
+ <div class="river-numbers"><div class="river-number"><span>관측소 수위</span><strong id="river_level_mangwon">— m</strong></div><div class="river-number"><span>1시간 변화</span><strong id="river_change_mangwon">비교 중</strong></div><div class="river-number"><span id="river_average_label_mangwon">직전 1시간 평균</span><strong id="river_average_mangwon">— m</strong></div></div>
+<section class="fishing-brief" id="fishing_brief_mangwon" aria-label="낚시 조건 한눈에 보기"><div class="fishing-brief-heading"><h3>지금 낚시 체크</h3><span>관측 · 예보</span></div><div class="fishing-metrics" aria-live="polite"><article class="fishing-metric slack" id="fishing_card_slack_mangwon" role="button" tabindex="0" data-water-timeline="mangwon" aria-haspopup="dialog" aria-labelledby="fishing_slack_label_mangwon fishing_slack_mangwon fishing_timeline_hint_mangwon" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8c3-4 5 4 8 0s5 4 10 0M3 16c3-4 5 4 8 0s5 4 10 0"/></svg><span id="fishing_slack_label_mangwon">물돌이 참고 · 수위 추정</span></div><strong class="fishing-metric-value" id="fishing_slack_mangwon">관측 보강 중</strong><p id="fishing_slack_note_mangwon">직전 1시간 수위로 계산</p><span class="water-timeline-hint" id="fishing_timeline_hint_mangwon">6시간 수위표 보기 ›</span></article><article class="fishing-metric water" id="fishing_card_water_mangwon" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18V7m-3 3 3-3 3 3M12 17c3-3 5 3 9 0M12 12h9"/></svg><span>직전 1시간 수위</span></div><strong class="fishing-metric-value" id="fishing_water_mangwon">확인 중</strong><p id="fishing_water_note_mangwon">직전 1시간 실측 비교 중</p></article><article class="fishing-metric rain" id="fishing_card_rain_mangwon" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 14a4 4 0 1 1 1-8 5 5 0 0 1 9 2 3 3 0 0 1 0 6H7m1 3-1 3m6-3-1 3m6-3-1 3"/></svg><span>5시간 내 강수</span></div><strong class="fishing-metric-value" id="fishing_rain_mangwon">—%</strong><p id="fishing_rain_note_mangwon">시간별 강수확률 확인 중</p></article><article class="fishing-metric wind" id="fishing_card_wind_mangwon" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h5"/></svg><span>현재 바람</span></div><strong class="fishing-metric-value" id="fishing_wind_mangwon">확인 중</strong><p id="fishing_wind_note_mangwon">기상청 실황 확인 중</p><div class="wind-motion" id="fishing_wind_motion_mangwon" data-level="unknown" data-animate="false" role="img" aria-label="풍속 자료 확인 중"><svg viewBox="0 0 160 44" aria-hidden="true" focusable="false"><path class="wind-ground" d="M8 39h144"/><g class="wind-reeds"><path d="M119 38q-1-15-8-23M119 38q2-18 12-27M119 38q9-11 17-12"/><path class="wind-leaf" d="M111 15q-9-1-8-9 8 0 8 9M131 11q-1-8 6-9 2 7-6 9M136 26q3-7 10-6-2 7-10 6"/></g><g class="wind-gusts"><path class="gust gust-a" d="M-20 13h47q8 0 8-5t-6-5"/><path class="gust gust-b" d="M-30 26h70q12 0 12 7t-8 6"/><path class="gust gust-c" d="M-40 20h48"/><path class="gust gust-d" d="M-10 7h40"/></g></svg></div><div class="wind-scale" id="fishing_wind_scale_mangwon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></article></div><p class="fishing-next" id="fishing_water_next_mangwon">직전 1시간 수위 기준 · 실제 물돌이 미확인</p></section>
+ <details class="river-factor-details fishing-basis"><summary>관측·분석 근거</summary><p id="fishing_turn_detail_mangwon">최신 10분 관측 7개로 수위 전환 후보를 계산합니다.</p><p class="river-description" id="river_description_mangwon" aria-live="polite">실제 관측으로 수위의 오르내림과 영향을 함께 확인합니다.</p><div class="river-factors" id="river_factors_mangwon"><div class="river-factor" data-status="missing"><span>조석 참고</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>팔당 방류</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>강수</span><strong>자료 확인 중</strong></div></div><p id="river_factor_detail_mangwon">관측 자료를 확인 중입니다.</p><p class="river-peak" id="river_peak_mangwon" hidden></p><p class="fishing-method-note">강수는 앞으로 5개 시간별 예보의 최대 확률입니다. 5시간 전체의 비 올 확률을 합산한 값은 아닙니다. 바람은 앱의 낚시용 구분으로 없음 &lt;0.3 / 조금 &lt;1.6 / 약간 &lt;3.4 / 중간 &lt;8 / 강풍 ≥8 m/s이며 공식 강풍특보 등급과 다릅니다. 수위 전환 후보는 최신 관측 직전 1시간의 곡선을 연장한 실험 추정입니다. 7개 관측과 감속 일관성이 있을 때만 1시간 이내 후보를 계산합니다. 표시 여유 ±20분은 통계적 신뢰구간이 아닙니다. 실제 유속 반전인 물돌이 예보가 아니며, 낮은 정확도로 낚시 시점을 확정하는 데 쓸 수 없습니다.</p><a href="https://www.tidesandcurrents.noaa.gov/faq.html" target="_blank" rel="noopener">조석과 물돌이 시각의 차이 · NOAA</a></details>
+ <div class="river-footer"><span class="river-source" id="river_source_mangwon">공식 자료 연결 중</span><div class="river-actions"><button type="button" class="river-reload" data-river-reload="mangwon">빠른 종합 다시 조회</button><button type="button" class="river-history" data-river-history="mangwon">24시간 정밀 분석</button></div></div><output class="river-request" id="river_request_mangwon" role="status" aria-live="polite">수위 종합 자료를 확인합니다.</output>
+ </section>
+<details class="water-observation-details"><summary>관측 상세 보기 · 기간 · 평균 · 10분 내역</summary>
+ <div class="water-periods" role="group" aria-label="수위 조회 기간"><button type="button" data-water-zone="mangwon" data-water-hours="6" aria-pressed="true" class="active">6시간</button><button type="button" data-water-zone="mangwon" data-water-hours="24" aria-pressed="false" class="">24시간</button><button type="button" data-water-zone="mangwon" data-water-hours="72" aria-pressed="false" class="">3일</button><button type="button" class="water-reload" data-water-reload="mangwon">공식 자료 다시 조회</button></div>
+ <output class="water-request-status" id="water_status_mangwon" role="status" aria-live="polite">공식 관측 자료 조회를 준비합니다.</output>
+ <div class="water-source" id="water_source_mangwon">HRFCO · 10분 관측 자료를 확인합니다.</div>
+ <div class="water-stats" id="water_stats_mangwon"></div>
+ <div class="chart-container legacy-water-graph" hidden aria-hidden="true"><div id="chart_mangwon" class="water-chart" role="img" aria-label="관측 수위 추이"></div></div>
+ <label class="water-slider-label" for="water_slider_mangwon">관측 시각 선택 <small>아래 막대를 움직여 실제 관측값을 확인하세요</small></label>
+ <input class="water-slider" id="water_slider_mangwon" data-water-slider="mangwon" type="range" min="0" max="0" value="0" step="1" disabled>
+ <output class="water-point" id="water_point_mangwon" aria-live="polite">관측 자료 조회 중…</output>
+ <div class="water-quality" id="water_quality_mangwon"></div>
+ <details class="water-records"><summary>10분별 관측 내역</summary><div class="water-table-wrap"><table><thead><tr><th>관측 시각 (KST)</th><th>수위</th><th>직전 대비</th></tr></thead><tbody id="water_table_mangwon"><tr><td colspan="3">조회 중…</td></tr></tbody></table></div><div class="water-actions"><button type="button" data-water-more="mangwon" id="water_more_mangwon" hidden>12건 더 보기</button><button type="button" data-water-csv="mangwon" id="water_csv_mangwon" disabled>CSV 저장</button></div></details>
+ <p class="water-disclaimer">관측소 기준 수위(m)이며 공원의 수심이 아닙니다. 선택 기간의 실제 관측만 표시하며 누락값은 평균에서 제외합니다.</p>
+ </details>
+</div>
+
+
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">행주대교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_mangwon">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_mangwon">분석 중...</div>
+                        <div class="dash-update" id="time_level_mangwon">업데이트 중...</div>
+                    </div>
+                </div>
+
+                <details class="forecast-details weather-details" id="weather_details_mangwon"><summary><span>기상청 날씨 · 시간별/일별 예보</span><small>상세 보기</small></summary><div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 날씨 · 시간별/일별 예보</div><div class="weather-outlook" id="weather_periods_mangwon" aria-live="polite"><div class="weather-mini"><b>3시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>5시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>내일</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>모레</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div></div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_mangwon">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_mangwon">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_mangwon">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_mangwon">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_mangwon"></div>
+                    <div class="dash-update" id="time_weather_mangwon" style="text-align:right;">업데이트 중...</div>
+                </div></details>
+            </div>
+
+            <details class="forecast-details tide-details" id="tide_details_mangwon"><summary><span>오늘 조석 · 인천</span><small>상세 보기</small></summary><div class="card">
+                <div class="table-header-area"><div class="today-date" id="date_mangwon">YYYY. MM. DD. 물때</div></div>
+                <div class="tide-summary" id="tide_summary_mangwon" aria-live="polite">오늘 조석 예보 조회 중…</div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>구분</th><th>시각</th><th>조위</th><th>상태</th></tr></thead>
+                        <tbody id="tide_mangwon"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 기준 조위·조차이며 한강 현장 수위 변화량이나 물때 도착 시각으로 환산하지 않습니다.</div>
+            </div></details>
+
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🎣 어종별 루어낚시 강의</div>
+                    <button class="btn-ai" onclick="getAIAdvice('mangwon')" id="btn_ai_mangwon">✨ 5종 루어 강의 받기</button>
+                </div>
+                <div class="ai-basis" id="ai_basis_mangwon" aria-live="polite">사용할 자료 확인 중…</div>
+                <div class="ai-species-list" aria-label="강의 대상어"><span>쏘가리</span><span>점농어</span><span>메기</span><span>강준치</span><span>배스</span></div>
+                <div class="ai-content" id="ai_result_mangwon">
+                    현재 기온·바람·수위와 인천 조석을 참고해 쏘가리·점농어·메기·강준치·배스의 루어 선택, 캐스팅과 릴링, 반응 없을 때의 조정 방법을 각각 설명합니다. 기온과 수온, 인천 조석과 한강 현장 흐름은 구분합니다.
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 반포 탭 ==================== -->
+        <div id="banpo" class="tab-content">
+            <div class="card water-detail-card" style="margin-bottom:20px">
+ <div class="chart-header"><div class="chart-title">지금 한강 · 낚시 조건</div><span class="trend-badge" id="trend_banpo">자료 확인 중</span></div>
+<section class="river-summary" id="river_summary_banpo" data-state="unknown" data-motion="paused" data-animate="false" aria-label="한강 수위 종합 분석">
+ <div class="river-heading"><div><span class="river-eyebrow" id="river_profile_banpo">최근 6시간 빠른 종합</span><h2 id="river_title_banpo">현재 수위 확인 중</h2></div><button type="button" class="river-pause" data-river-pause="banpo" aria-pressed="false">움직임 멈춤</button></div>
+ <div class="river-scene"><svg viewBox="0 0 400 180" role="img" id="river_scene_banpo" aria-label="수위 자료 확인 중"><defs><clipPath id="river_basin_banpo"><path d="M26 43 Q48 150 96 156 H304 Q354 150 374 43 Z"/></clipPath></defs><path d="M0 44H26Q48 150 96 156H304Q354 150 374 44H400V180H0Z" fill="#e2e8f0"/><g clip-path="url(#river_basin_banpo)"><rect id="river_fill_banpo" class="river-water-fill" x="0" y="104" width="400" height="76"/><path id="river_wave_banpo" class="river-wave" d="M-10 104 Q15 99 40 104 T90 104 T140 104 T190 104 T240 104 T290 104 T340 104 T390 104 T440 104"/><path id="river_wave_soft_banpo" class="river-wave river-wave-soft" d="M-10 114 Q15 111 40 114 T90 114 T140 114 T190 114 T240 114 T290 114 T340 114 T390 114 T440 114"/></g><path d="M54 54H346M82 54V96M318 54V96" stroke="#cbd5e1" stroke-width="5" fill="none"/><path d="M103 54Q151 24 200 54Q250 24 297 54" stroke="#94a3b8" stroke-width="3" fill="none"/><text x="200" y="132" text-anchor="middle" class="river-arrow" id="river_arrow_banpo">—</text></svg></div>
+ <p class="river-scene-note" id="river_scale_banpo">장면 높이는 최근 24시간 관측 범위의 상대 위치 · 실제 수심 아님</p>
+ <div class="river-numbers"><div class="river-number"><span>관측소 수위</span><strong id="river_level_banpo">— m</strong></div><div class="river-number"><span>1시간 변화</span><strong id="river_change_banpo">비교 중</strong></div><div class="river-number"><span id="river_average_label_banpo">직전 1시간 평균</span><strong id="river_average_banpo">— m</strong></div></div>
+<section class="fishing-brief" id="fishing_brief_banpo" aria-label="낚시 조건 한눈에 보기"><div class="fishing-brief-heading"><h3>지금 낚시 체크</h3><span>관측 · 예보</span></div><div class="fishing-metrics" aria-live="polite"><article class="fishing-metric slack" id="fishing_card_slack_banpo" role="button" tabindex="0" data-water-timeline="banpo" aria-haspopup="dialog" aria-labelledby="fishing_slack_label_banpo fishing_slack_banpo fishing_timeline_hint_banpo" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8c3-4 5 4 8 0s5 4 10 0M3 16c3-4 5 4 8 0s5 4 10 0"/></svg><span id="fishing_slack_label_banpo">물돌이 참고 · 수위 추정</span></div><strong class="fishing-metric-value" id="fishing_slack_banpo">관측 보강 중</strong><p id="fishing_slack_note_banpo">직전 1시간 수위로 계산</p><span class="water-timeline-hint" id="fishing_timeline_hint_banpo">6시간 수위표 보기 ›</span></article><article class="fishing-metric water" id="fishing_card_water_banpo" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18V7m-3 3 3-3 3 3M12 17c3-3 5 3 9 0M12 12h9"/></svg><span>직전 1시간 수위</span></div><strong class="fishing-metric-value" id="fishing_water_banpo">확인 중</strong><p id="fishing_water_note_banpo">직전 1시간 실측 비교 중</p></article><article class="fishing-metric rain" id="fishing_card_rain_banpo" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 14a4 4 0 1 1 1-8 5 5 0 0 1 9 2 3 3 0 0 1 0 6H7m1 3-1 3m6-3-1 3m6-3-1 3"/></svg><span>5시간 내 강수</span></div><strong class="fishing-metric-value" id="fishing_rain_banpo">—%</strong><p id="fishing_rain_note_banpo">시간별 강수확률 확인 중</p></article><article class="fishing-metric wind" id="fishing_card_wind_banpo" data-status="missing"><div class="fishing-metric-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h5"/></svg><span>현재 바람</span></div><strong class="fishing-metric-value" id="fishing_wind_banpo">확인 중</strong><p id="fishing_wind_note_banpo">기상청 실황 확인 중</p><div class="wind-motion" id="fishing_wind_motion_banpo" data-level="unknown" data-animate="false" role="img" aria-label="풍속 자료 확인 중"><svg viewBox="0 0 160 44" aria-hidden="true" focusable="false"><path class="wind-ground" d="M8 39h144"/><g class="wind-reeds"><path d="M119 38q-1-15-8-23M119 38q2-18 12-27M119 38q9-11 17-12"/><path class="wind-leaf" d="M111 15q-9-1-8-9 8 0 8 9M131 11q-1-8 6-9 2 7-6 9M136 26q3-7 10-6-2 7-10 6"/></g><g class="wind-gusts"><path class="gust gust-a" d="M-20 13h47q8 0 8-5t-6-5"/><path class="gust gust-b" d="M-30 26h70q12 0 12 7t-8 6"/><path class="gust gust-c" d="M-40 20h48"/><path class="gust gust-d" d="M-10 7h40"/></g></svg></div><div class="wind-scale" id="fishing_wind_scale_banpo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></article></div><p class="fishing-next" id="fishing_water_next_banpo">직전 1시간 수위 기준 · 실제 물돌이 미확인</p></section>
+ <details class="river-factor-details fishing-basis"><summary>관측·분석 근거</summary><p id="fishing_turn_detail_banpo">최신 10분 관측 7개로 수위 전환 후보를 계산합니다.</p><p class="river-description" id="river_description_banpo" aria-live="polite">실제 관측으로 수위의 오르내림과 영향을 함께 확인합니다.</p><div class="river-factors" id="river_factors_banpo"><div class="river-factor" data-status="missing"><span>조석 참고</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>팔당 방류</span><strong>자료 확인 중</strong></div><div class="river-factor" data-status="missing"><span>강수</span><strong>자료 확인 중</strong></div></div><p id="river_factor_detail_banpo">관측 자료를 확인 중입니다.</p><p class="river-peak" id="river_peak_banpo" hidden></p><p class="fishing-method-note">강수는 앞으로 5개 시간별 예보의 최대 확률입니다. 5시간 전체의 비 올 확률을 합산한 값은 아닙니다. 바람은 앱의 낚시용 구분으로 없음 &lt;0.3 / 조금 &lt;1.6 / 약간 &lt;3.4 / 중간 &lt;8 / 강풍 ≥8 m/s이며 공식 강풍특보 등급과 다릅니다. 수위 전환 후보는 최신 관측 직전 1시간의 곡선을 연장한 실험 추정입니다. 7개 관측과 감속 일관성이 있을 때만 1시간 이내 후보를 계산합니다. 표시 여유 ±20분은 통계적 신뢰구간이 아닙니다. 실제 유속 반전인 물돌이 예보가 아니며, 낮은 정확도로 낚시 시점을 확정하는 데 쓸 수 없습니다.</p><a href="https://www.tidesandcurrents.noaa.gov/faq.html" target="_blank" rel="noopener">조석과 물돌이 시각의 차이 · NOAA</a></details>
+ <div class="river-footer"><span class="river-source" id="river_source_banpo">공식 자료 연결 중</span><div class="river-actions"><button type="button" class="river-reload" data-river-reload="banpo">빠른 종합 다시 조회</button><button type="button" class="river-history" data-river-history="banpo">24시간 정밀 분석</button></div></div><output class="river-request" id="river_request_banpo" role="status" aria-live="polite">수위 종합 자료를 확인합니다.</output>
+ </section>
+<details class="water-observation-details"><summary>관측 상세 보기 · 기간 · 평균 · 10분 내역</summary>
+ <div class="water-periods" role="group" aria-label="수위 조회 기간"><button type="button" data-water-zone="banpo" data-water-hours="6" aria-pressed="true" class="active">6시간</button><button type="button" data-water-zone="banpo" data-water-hours="24" aria-pressed="false" class="">24시간</button><button type="button" data-water-zone="banpo" data-water-hours="72" aria-pressed="false" class="">3일</button><button type="button" class="water-reload" data-water-reload="banpo">공식 자료 다시 조회</button></div>
+ <output class="water-request-status" id="water_status_banpo" role="status" aria-live="polite">공식 관측 자료 조회를 준비합니다.</output>
+ <div class="water-source" id="water_source_banpo">HRFCO · 10분 관측 자료를 확인합니다.</div>
+ <div class="water-stats" id="water_stats_banpo"></div>
+ <div class="chart-container legacy-water-graph" hidden aria-hidden="true"><div id="chart_banpo" class="water-chart" role="img" aria-label="관측 수위 추이"></div></div>
+ <label class="water-slider-label" for="water_slider_banpo">관측 시각 선택 <small>아래 막대를 움직여 실제 관측값을 확인하세요</small></label>
+ <input class="water-slider" id="water_slider_banpo" data-water-slider="banpo" type="range" min="0" max="0" value="0" step="1" disabled>
+ <output class="water-point" id="water_point_banpo" aria-live="polite">관측 자료 조회 중…</output>
+ <div class="water-quality" id="water_quality_banpo"></div>
+ <details class="water-records"><summary>10분별 관측 내역</summary><div class="water-table-wrap"><table><thead><tr><th>관측 시각 (KST)</th><th>수위</th><th>직전 대비</th></tr></thead><tbody id="water_table_banpo"><tr><td colspan="3">조회 중…</td></tr></tbody></table></div><div class="water-actions"><button type="button" data-water-more="banpo" id="water_more_banpo" hidden>12건 더 보기</button><button type="button" data-water-csv="banpo" id="water_csv_banpo" disabled>CSV 저장</button></div></details>
+ <p class="water-disclaimer">관측소 기준 수위(m)이며 공원의 수심이 아닙니다. 선택 기간의 실제 관측만 표시하며 누락값은 평균에서 제외합니다.</p>
+ </details>
+</div>
+
+
+            <div class="dashboard-grid">
+                <div class="dash-card level">
+                    <div class="level-left">
+                        <div class="api-status">연결 상태 확인 중</div>
+                        <div class="dash-title">잠수교 관측소 수위</div>
+                        <div class="dash-value" id="val_level_banpo">--<span class="dash-unit">m</span></div>
+                    </div>
+                    <div class="level-right">
+                        <div class="dash-diff" id="diff_level_banpo">분석 중...</div>
+                        <div class="dash-update" id="time_level_banpo">업데이트 중...</div>
+                    </div>
+                </div>
+
+                <details class="forecast-details weather-details" id="weather_details_banpo"><summary><span>기상청 날씨 · 시간별/일별 예보</span><small>상세 보기</small></summary><div class="dash-card weather-forecast">
+                    <div class="dash-title">기상청 날씨 · 시간별/일별 예보</div><div class="weather-outlook" id="weather_periods_banpo" aria-live="polite"><div class="weather-mini"><b>3시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>5시간 후</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>내일</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div><div class="weather-mini"><b>모레</b><strong>조회 중</strong><small>공식 예보 확인 중</small></div></div>
+                    <div class="forecast-header">
+                        <div class="forecast-current-left">
+                            <div class="dash-value" id="val_weather_banpo">--<span class="dash-unit">°C</span></div>
+                            <div class="dash-diff" id="desc_weather_banpo">분석 중...</div>
+                        </div>
+                        <div class="forecast-current-right">
+                            <div class="dash-value" id="val_wind_banpo">--<span class="dash-unit">m/s</span></div>
+                            <div class="dash-diff" id="desc_wind_banpo">분석 중...</div>
+                        </div>
+                    </div>
+                    <div class="timeline-container" id="timeline_weather_banpo"></div>
+                    <div class="dash-update" id="time_weather_banpo" style="text-align:right;">업데이트 중...</div>
+                </div></details>
+            </div>
+
+            <details class="forecast-details tide-details" id="tide_details_banpo"><summary><span>오늘 조석 · 인천</span><small>상세 보기</small></summary><div class="card">
+                <div class="table-header-area"><div class="today-date" id="date_banpo">YYYY. MM. DD. 물때</div></div>
+                <div class="tide-summary" id="tide_summary_banpo" aria-live="polite">오늘 조석 예보 조회 중…</div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>구분</th><th>시각</th><th>조위</th><th>상태</th></tr></thead>
+                        <tbody id="tide_banpo"></tbody>
+                    </table>
+                </div>
+                <div class="api-notice">인천 기준 조위·조차이며 한강 현장 수위 변화량이나 물때 도착 시각으로 환산하지 않습니다.</div>
+            </div></details>
+
+            <div class="card ai-card" style="margin-top: 20px;">
+                <div class="ai-header">
+                    <div class="ai-title">🎣 어종별 루어낚시 강의</div>
+                    <button class="btn-ai" onclick="getAIAdvice('banpo')" id="btn_ai_banpo">✨ 5종 루어 강의 받기</button>
+                </div>
+                <div class="ai-basis" id="ai_basis_banpo" aria-live="polite">사용할 자료 확인 중…</div>
+                <div class="ai-species-list" aria-label="강의 대상어"><span>쏘가리</span><span>점농어</span><span>메기</span><span>강준치</span><span>배스</span></div>
+                <div class="ai-content" id="ai_result_banpo">
+                    현재 기온·바람·수위와 인천 조석을 참고해 쏘가리·점농어·메기·강준치·배스의 루어 선택, 캐스팅과 릴링, 반응 없을 때의 조정 방법을 각각 설명합니다. 기온과 수온, 인천 조석과 한강 현장 흐름은 구분합니다.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <nav class="app-nav" aria-label="화면 이동"><button type="button" data-section="map" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>지도</button><button type="button" data-section="chart" class="" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 3v18h18M6 15l4-5 4 3 6-8"/></svg>수위</button><button type="button" data-section="weather" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 18a4 4 0 1 1 1-7.9 6 6 0 0 1 11.5 2A3 3 0 0 1 19 18H7Z"/></svg>날씨</button><button type="button" data-section="tide" class="" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12c3-7 7-7 10 0s7 7 10 0M2 18c3-4 7-4 10 0s7 4 10 0M2 6c3-4 7-4 10 0s7 4 10 0"/></svg>물때</button><button type="button" data-section="ai" class="" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 2.7 6.3L21 12l-6.3 2.7L12 21l-2.7-6.3L3 12l6.3-2.7L12 3Z"/></svg>AI 조언</button></nav><div class="offline-banner" id="offline-banner" role="status" hidden>인터넷이 끊겼습니다. 표시된 자료는 갱신되지 않습니다.</div><dialog class="install-dialog" id="install-dialog"><div class="dialog-title"><h2>한강 낚시 앱 설치</h2><button class="close" id="install-close" aria-label="닫기">✕</button></div><p>휴대폰 홈 화면에서 바로 열어 보세요.</p><div class="devices" role="group" aria-label="기기 선택"><button data-device="android">안드로이드</button><button data-device="ios">아이폰</button><button data-device="other">PC·기타</button></div><div id="install-guide"></div><button class="primary" id="install-native" hidden>이 기기에 앱 설치</button><button class="copy" id="install-copy">앱 주소 복사</button><output id="install-notice" aria-live="polite"></output></dialog>
+<dialog class="water-timeline-dialog" id="water-timeline-dialog" aria-labelledby="water-timeline-title"><div class="water-timeline-header"><h2 id="water-timeline-title">최근 6시간 수위</h2><button type="button" id="water-timeline-close" aria-label="수위표 닫기">✕</button></div><p id="water-timeline-note" role="status">실제 관측을 확인합니다.</p><p class="water-timeline-range" id="water-timeline-range"></p><div class="water-timeline-scroll" tabindex="0" aria-label="최근 6시간 10분 간격 수위 기록"><table><caption>최신 기록부터 표시 · 누락값은 미수신 · 단위 m / cm</caption><thead><tr><th scope="col">관측 시각</th><th scope="col">수위</th><th scope="col">10분 변화</th><th scope="col">방향</th></tr></thead><tbody id="water-timeline-body"></tbody></table></div><div class="water-timeline-footer"><small>관측소 기준 높이이며 낚시터 수심이나 실제 유속이 아닙니다.</small><button type="button" id="water-timeline-reload">수위 다시 확인</button></div></dialog>
+    <script>
+async function serverData(kind,zone='',method='GET',hours=6,force=false,mode='quick') {
+ if(!navigator.onLine)throw new Error('인터넷에 다시 연결해 주세요.');
+ const response=await fetch('/api/data?kind='+encodeURIComponent(kind)+'&zone='+encodeURIComponent(zone)+(kind==='water'?'&hours='+hours:'')+(kind==='river'?'&mode='+encodeURIComponent(mode):'')+(kind==='tides'?'&nearby=1':'')+(['water','river','advice'].includes(kind)?'&lag=15':'')+((kind==='water'||kind==='river')&&force?'&refresh=1':''),{method,cache:'no-store',signal:AbortSignal.timeout(kind==='advice'?100000:50000)});
+ if(response.status===401||response.status===403)throw new Error('로그인 후 다시 열어 주세요.');
+ let payload;try{payload=await response.json();}catch{throw new Error('자료를 불러오지 못했습니다. 다시 시도해 주세요.');}
+ if(!response.ok||payload.error)throw new Error(payload.error||'자료 조회 실패');
+ return {...payload.data,receivedAt:payload.fetchedAt};
+}
+'use strict';
+const zones = {
+  ttukseom: { name:'뚝섬', station:'청담대교', nx:62, ny:126, sample:1.2 },
+  yanghwa: { name:'양화/선유도', station:'한강대교', nx:58, ny:126, sample:1.5 },
+  mangwon: { name:'망원', station:'행주대교', nx:58, ny:127, sample:1.6 },
+  banpo: { name:'반포', station:'잠수교', nx:60, ny:125, sample:1.8 }
+};
+let config = { mode:'live', gemini:true, model:'gemini-3.1-flash-lite' };
+let activeZone='ttukseom', generation=0, stationPromise=null;
+let tideCache=null;
+const states={}, pending={};
+const waterHours={ttukseom:6,yanghwa:6,mangwon:6,banpo:6};
+const riverPaused={};
+const riverMotionPreference=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+const $ = id => document.getElementById(id);
+const text = (id, value) => { $(id).textContent=value; };
+const escapeHTML = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function kst(date=new Date()) { return new Date(date.getTime()+9*3600000).toISOString().slice(0,16).replace(/[-T:]/g,''); }
+function stamp(s) { return `${s.slice(4,6)}/${s.slice(6,8)} ${s.slice(8,10)}:${s.slice(10,12)} KST`; }
+function parseStamp(s) {
+  if(!/^\d{12}$/.test(s)) return NaN;
+  const date = new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(8,10)}:${s.slice(10,12)}:00+09:00`);
+  return Number.isFinite(+date) && kst(date)===s ? +date : NaN;
+}
+function numeric(v) { return v!==null && v!==undefined && String(v).trim()!=='' && Number.isFinite(Number(v)); }
+function decodeKey(key) { try { return decodeURIComponent(key.trim()); } catch { return key.trim(); } }
+function reason(e) {
+  if(e.name==='AbortError') return '응답 시간 초과';
+  if(e instanceof TypeError) return '연결 실패 · 인터넷 상태를 확인한 뒤 다시 조회해 주세요';
+  return e.message || '데이터 조회 실패';
+}
+async function fetchJSON(url, options={}) {
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  try {
+    const r=await fetch(url,{...options,signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+    if(!r.ok) throw new Error(`API 오류 (HTTP ${r.status})`);
+    try { return await r.json(); } catch { throw new Error('JSON 응답이 아닙니다 · 인증키와 서비스 승인을 확인하세요'); }
+  } finally { clearTimeout(timeout); }
+}
+
+/** All cutoffs use real observation time; retrieval never renews an observation. */
+/** All cutoffs use real observation time; retrieval never renews an observation. */
+function laggedWaterEnd(now=Date.now(),minutes=15){return Math.floor((now-minutes*60000)/600000)*600000;}
+
+function delayedWaterSnapshot(water,now=Date.now()){
+ const minute=60000,hour=3600000,end=Math.floor((now-15*minute)/(10*minute))*10*minute;
+ const stamp=ms=>new Date(ms+9*hour).toISOString().slice(0,16).replace(/[-T:]/g,'');
+ const parse=s=>{if(!/^\d{12}$/.test(String(s)))return NaN;const ms=Date.parse(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)+'T'+s.slice(8,10)+':'+s.slice(10,12)+':00+09:00');return Number.isFinite(ms)&&stamp(ms)===s?ms:NaN;};
+ if(!Number.isFinite(now)||!water||water.demo||!Array.isArray(water.rows))return null;
+ const hours=[6,24,72].includes(water.hours)?water.hours:6,byTime=new Map();
+ for(const row of water.rows){const at=parse(row?.time);if(!Number.isFinite(at)||at>end||at<end-(hours+24)*hour||typeof row.value!=='number'||!Number.isFinite(row.value)||row.value<=-90)continue;byTime.set(row.time,{time:row.time,value:row.value});}
+ const all=[...byTime.values()].sort((a,b)=>a.time.localeCompare(b.time));if(!all.length)return null;const lastAt=parse(all.at(-1).time),rows=all.filter(row=>parse(row.time)>=lastAt-hours*hour);
+ const age=now-parse(rows.at(-1).time);
+ return {...water,hours,rows,delayMinutes:15,cutoffTime:stamp(end),stale:age>=hour,observationAgeMinutes:Math.floor(age/minute)};
+}
+
+function waterAgeLabel(time){const minutes=Math.max(0,Math.floor((Date.now()-parseStamp(time))/60000));return Number.isFinite(minutes)?(minutes<60?minutes+'분 전':Math.floor(minutes/60)+'시간 '+minutes%60+'분 전')+' 관측':'관측 시각 확인 중';}
+function rememberWater(zone,data){
+ const view=delayedWaterSnapshot({...data,hours:6});if(!view)return;
+ const last=parseStamp(view.rows.at(-1).time);if(Date.now()-last>24*3600000)return;
+ try{const prior=restoreWater(zone);if(prior&&prior.rows.at(-1).time>view.rows.at(-1).time)return;localStorage.setItem('hangang-water-lag15-v1:'+zone,JSON.stringify({station:zones[zone].station,stationCode:{ttukseom:'1018662',yanghwa:'1018683',mangwon:'1019630',banpo:'1018680'}[zone],hours:6,rows:view.rows,checkedAt:data.checkedAt||data.receivedAt||null,delayMinutes:15,requestedTo:data.requestedTo||view.cutoffTime}));}catch{}
+}
+function restoreWater(zone){
+ try{const value=JSON.parse(localStorage.getItem('hangang-water-lag15-v1:'+zone)||'null'),code={ttukseom:'1018662',yanghwa:'1018683',mangwon:'1019630',banpo:'1018680'}[zone];if(!value||value.stationCode!==code)return null;const view=delayedWaterSnapshot(value);if(!view||Date.now()-parseStamp(view.rows.at(-1).time)>24*3600000)return null;return {...view,cached:true};}catch{return null;}
+}
+function timelineSnapshot(zone){
+ const state=states[zone],candidates=[state?.waterRangeCache?.[6],state?.water,state?.river?.water].map(value=>delayedWaterSnapshot(value)).filter(Boolean);
+ candidates.sort((a,b)=>b.rows.at(-1).time.localeCompare(a.rows.at(-1).time)||b.rows.length-a.rows.length);return candidates[0]||null;
+}
+function refreshWaterTimeline(){
+ const dialog=$('water-timeline-dialog');if(!dialog?.open)return;const zone=dialog.dataset.zone,state=states[zone],data=timelineSnapshot(zone);
+ text('water-timeline-title',zones[zone].name+' · 최근 6시간 수위');
+ const button=$('water-timeline-reload');button.disabled=!!state?.timelineBusy||!!state?.waterBusy;button.textContent=button.disabled?'관측 확인 중…':'수위 다시 확인';
+ if(!data){text('water-timeline-note',state?.waterBusy||state?.timelineBusy?'15분 지연 기준의 실제 관측을 조회 중입니다.':'수위 연결이 지연되고 있습니다. 다시 확인해 주세요.');text('water-timeline-range','수신된 관측만 표시합니다.');$('water-timeline-body').innerHTML='<tr><td colspan="4">아직 확보된 수위 기록이 없습니다.</td></tr>';return;}
+ const last=data.rows.at(-1),end=parseStamp(last.time),start=end-6*3600000,rows=data.rows.filter(row=>parseStamp(row.time)>=start),byTime=new Map(rows.map(row=>[row.time,row]));
+ const values=rows.map(row=>row.value),average=values.length>=2?(values.reduce((a,b)=>a+b,0)/values.length).toFixed(2)+' m':'자료 부족';
+ text('water-timeline-note',zones[zone].station+' 관측소 · '+waterAgeLabel(last.time)+(data.stale?' · 오래된 기록':' · 15분 지연 기준')+(state?.waterError||state?.timelineError||data.connectionWarning?' · 연결 지연, 확보 기록 유지':''));
+ text('water-timeline-range',stamp(kst(new Date(start)))+' ~ '+stamp(last.time)+' · '+rows.length+'/37건 · 확보 평균 '+average);
+ $('water-timeline-body').innerHTML=Array.from({length:37},(_,i)=>{const at=end-i*600000,time=kst(new Date(at)),row=byTime.get(time),before=byTime.get(kst(new Date(at-600000))),delta=row&&before?Math.round((row.value-before.value)*100):null,trend=delta===null?'—':delta>0?'↑ 상승':delta<0?'↓ 하강':'— 같음',status=delta===null?'missing':delta>0?'up':delta<0?'down':'flat';return '<tr data-trend="'+status+'"><td>'+time.slice(4,6)+'/'+time.slice(6,8)+' '+fishingClock(time)+'</td><td>'+(row?row.value.toFixed(2)+' m':'미수신')+'</td><td>'+(delta===null?'—':signedCm(delta))+'</td><td>'+trend+'</td></tr>';}).join('');
+}
+function openWaterTimeline(zone){if(!zones[zone])return;const dialog=$('water-timeline-dialog');dialog.dataset.zone=zone;if(!dialog.open)dialog.showModal();refreshWaterTimeline();}
+async function reloadWaterTimeline(){
+ const dialog=$('water-timeline-dialog'),zone=dialog.dataset.zone,state=states[zone];if(!state||state.timelineBusy||state.waterBusy)return;
+ state.timelineBusy=true;state.timelineError=null;refreshWaterTimeline();
+ try{const data=await waterData(zone,config,6,true);if(states[zone]!==state)return;state.waterRangeCache??={};state.waterRangeCache[6]=data;rememberWater(zone,data);if(state.waterHours===6)acceptWater(zone,state,data);seedRiverWater(zone,state,data);}
+ catch(error){if(states[zone]===state)state.timelineError=reason(error);}
+ finally{state.timelineBusy=false;refreshWaterTimeline();}
+}
+
+function openTab(evt, zone) {
+  if(!zones[zone]) return;
+  activeZone=zone;
+  try{localStorage.setItem('hangang-zone',zone);}catch{}
+  document.querySelectorAll('.app-nav button').forEach(b=>{b.classList.toggle('active',b.dataset.section==='map');b.setAttribute('aria-pressed',String(b.dataset.section==='map'));});
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.toggle('active',e.id===zone));
+  document.querySelectorAll('.tab-button').forEach(e=>{const selected=e.getAttribute('onclick').includes(zone);e.classList.toggle('active',selected);e.setAttribute('aria-pressed',selected);});
+  document.querySelectorAll('.map-marker').forEach(e=>e.classList.toggle('active',e.id===`marker_${zone}`));
+  if(!states[zone] || Date.now()-states[zone].loaded>600000) loadZoneData(zone);
+  else updateAI(zone);
+  syncAllRiverMotion();
+}
+function normalWater(rows, now=Date.now()) {
+  if(!Array.isArray(rows)) throw new Error('수위 응답 형식 오류');
+  const byTime=new Map();
+  for(const row of rows) {
+    const s=String(row.ymdhm??''); const t=parseStamp(s);
+    if(Number.isFinite(t) && t<=now+60000 && t>=now-6*3600000 && numeric(row.wl) && Number(row.wl)>-90) byTime.set(s,{time:s,value:Number(row.wl)});
+  }
+  const out=[...byTime.values()].sort((a,b)=>a.time.localeCompare(b.time));
+  if(!out.length) throw new Error('최근 6시간의 유효한 수위 관측값이 없습니다');
+  return out;
+}
+function trend(values) {
+  if(values.length<2) return {label:'비교 자료 부족',cls:'flat'};
+  const diff=Math.round((values.at(-1)-values[0])*100)/100;
+  return {label:diff===0?'— 변화 없음':`${diff>0?'▲ 상승':'▼ 하강'} ${Math.abs(diff).toFixed(2)}m`,cls:diff===0?'flat':diff>0?'up':'down'};
+}
+function waterSummary(rows) {
+  const last=rows.at(-1),target=parseStamp(last.time)-3600000;
+  const before=rows.filter(r=>r!==last&&Math.abs(parseStamp(r.time)-target)<=5*60000).sort((a,b)=>Math.abs(parseStamp(a.time)-target)-Math.abs(parseStamp(b.time)-target))[0];
+  const change=before?Math.round((last.value-before.value)*100):null;
+  const recent=change===null?'1시간 변화: 비교 자료 부족':`약 1시간 변화: ${change>0?'+':''}${change} cm`;
+  const values=rows.map(r=>r.value);
+  return `${recent} · 조회 구간 ${Math.min(...values).toFixed(2)}~${Math.max(...values).toFixed(2)} m`;
+}
+async function waterData(zone,cfg,hours=waterHours[zone]||6,force=false){const data=await serverData('water',zone,'GET',hours,force),view=delayedWaterSnapshot(data);if(!view)throw new Error('15분 지연 기준의 유효한 관측을 아직 받지 못했습니다.');return view;}
+function waterDelta(rows,minutes) {
+ if(!rows.length)return null;const last=rows.at(-1),target=parseStamp(last.time)-minutes*60000,previous=rows.find(r=>parseStamp(r.time)===target);return previous?Math.round((last.value-previous.value)*100):null;
+}
+function signedCm(value){return value===null?'비교 자료 없음':(value>0?'+':'')+value+' cm';}
+function waterAverage(rows){const values=rows.filter(r=>typeof r.value==='number'&&Number.isFinite(r.value)).map(r=>r.value);return {count:values.length,value:values.length>=2?values.reduce((sum,value)=>sum+value,0)/values.length:null};}
+function waterXY(rows,index){const values=rows.map(r=>r.value),min=Math.min(...values)-.1,max=Math.max(...values)+.1,first=parseStamp(rows[0].time),span=Math.max(1,parseStamp(rows.at(-1).time)-first);return {x:55+(parseStamp(rows[index].time)-first)*690/span,y:165-(rows[index].value-min)/(max-min)*135};}
+function selectWaterPoint(zone,index){
+ const state=states[zone],rows=state?.water?.rows;if(!rows?.length)return;const i=Math.max(0,Math.min(rows.length-1,Math.round(Number(index)||0))),r=rows[i],xy=waterXY(rows,i);state.waterSelectedTime=i===rows.length-1?null:r.time;
+ $('water_slider_'+zone).value=String(i);$('water_slider_'+zone).setAttribute('aria-valuetext',stamp(r.time)+' · '+r.value.toFixed(2)+' 미터');
+ const line=$('water_cursor_'+zone),dot=$('water_dot_'+zone);if(line){line.setAttribute('x1',xy.x);line.setAttribute('x2',xy.x);}if(dot){dot.setAttribute('cx',xy.x);dot.setAttribute('cy',xy.y);}
+ const gap=i?Math.round((parseStamp(r.time)-parseStamp(rows[i-1].time))/60000):null,delta=i?Math.round((r.value-rows[i-1].value)*100):null;
+ text('water_point_'+zone,stamp(r.time)+' · '+r.value.toFixed(2)+' m'+(i?' · 직전 관측 대비 '+signedCm(delta)+' ('+gap+'분 간격)':' · 조회 구간 첫 관측'));
+}
+function renderWaterTable(zone){
+ const state=states[zone],rows=state?.water?.rows||[],count=state?.waterTableCount||12;
+ $('water_table_'+zone).innerHTML=rows.length?rows.slice(-count).reverse().map(r=>{const i=rows.indexOf(r),previous=rows[i-1],gap=previous?(parseStamp(r.time)-parseStamp(previous.time))/60000:0,change=previous?signedCm(Math.round((r.value-previous.value)*100)):'—';return '<tr><td>'+stamp(r.time).replace(' KST','')+'</td><td>'+r.value.toFixed(2)+' m</td><td>'+change+(gap&&gap!==10?' · '+gap+'분 간격':'')+'</td></tr>';}).join(''):'<tr><td colspan="3">아직 관측 자료가 없습니다.</td></tr>';
+ $('water_more_'+zone).hidden=rows.length<=count;$('water_csv_'+zone).disabled=!rows.length;
+}
+function renderWaterDetails(zone,data,error){
+ const rows=data?.rows||[],hours=states[zone]?.waterHours||waterHours[zone]||6;
+ document.querySelectorAll('[data-water-zone="'+zone+'"]').forEach(b=>{const chosen=Number(b.dataset.waterHours)===hours;b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));});
+ if(!rows.length){text('water_source_'+zone,zones[zone].station+' · '+hours+'시간 조회 · HRFCO 10분 관측');$('water_stats_'+zone).innerHTML='<div class="water-stat water-mean"><span>'+hours+'시간 관측 평균</span><strong>— m</strong><small>평균 계산에 필요한 관측 자료 확인 중</small></div>'+['10분 변화','1시간 변화','구간 최저','구간 최고'].map(label=>'<div class="water-stat"><span>'+label+'</span><strong>—</strong><small>관측 자료 확인 중</small></div>').join('');$('water_slider_'+zone).disabled=true;text('water_point_'+zone,error?reason(error):'관측 자료 조회 중…');text('water_quality_'+zone,'');renderWaterTable(zone);return;}
+ const last=rows.at(-1),low=rows.reduce((a,b)=>a.value<=b.value?a:b),high=rows.reduce((a,b)=>a.value>=b.value?a:b),d10=waterDelta(rows,10),d60=waterDelta(rows,60),average=waterAverage(rows);
+ text('water_source_'+zone,data.station+' · 관측소 '+(data.stationCode||'코드 확인 중')+' · '+(data.hours||hours)+'시간 조회 · HRFCO');
+ $('water_stats_'+zone).innerHTML='<div class="water-stat water-mean"><span>'+(data.hours||hours)+'시간 관측 평균</span><strong>'+(average.value===null?'— m':average.value.toFixed(2)+' m')+'</strong><small>'+(average.value===null?'평균 계산 자료 부족 · 유효 관측 '+average.count+'건 (2건 이상 필요)':'수신된 유효 관측 '+average.count+'건의 산술평균 · 누락값은 계산에서 제외')+'</small><small>선택 기간에 확보된 자료 기준이며 평년 수위·공원 수심이 아닙니다.</small></div>'+[['10분 변화',signedCm(d10),d10===null?'해당 시각 비교값 없음':stamp(last.time)+' 기준'],['1시간 변화',signedCm(d60),d60===null?'해당 시각 비교값 없음':stamp(last.time)+' 기준'],['구간 최저',low.value.toFixed(2)+' m',stamp(low.time)],['구간 최고',high.value.toFixed(2)+' m',stamp(high.time)]].map(([label,value,detail])=>'<div class="water-stat"><span>'+label+'</span><strong>'+value+'</strong><small>'+detail+'</small></div>').join('');
+ const expected=Math.round((parseStamp(last.time)-parseStamp(rows[0].time))/600000)+1,missing=Math.max(0,expected-rows.length);
+ text('water_quality_'+zone,rows.length+'건 · 실제 관측 범위 '+stamp(rows[0].time)+' ~ '+stamp(last.time)+(missing?' · 구간 내 누락 '+missing+'건':'')+(data.historyUnavailable?' · 기간별 이력 조회가 지연되어 확보된 최신 관측만 표시합니다.':'')+(data.cached?' · 최근 저장 관측 사용':'')+(data.stale?' · 최신 관측 지연':''));
+ $('water_slider_'+zone).disabled=false;$('water_slider_'+zone).max=String(rows.length-1);renderWaterTable(zone);
+}
+function renderChart(zone,rows,demo) {
+ if(!rows.length){text('chart_'+zone,'관측 자료 조회 대기');return;}
+ const values=rows.map(r=>r.value),min=Math.min(...values)-.1,max=Math.max(...values)+.1,y=v=>165-(v-min)/(max-min)*135;
+ const grid=[0,.5,1].map(t=>{const value=min+(max-min)*t,yy=y(value);return '<line x1="55" y1="'+yy+'" x2="745" y2="'+yy+'" stroke="#e2e8f0"/><text x="45" y="'+(yy+4)+'" text-anchor="end" fill="#64748b" font-size="12">'+value.toFixed(2)+'</text>';}).join('');
+ const segments=[];for(let i=0;i<rows.length;i++){if(i===0||parseStamp(rows[i].time)-parseStamp(rows[i-1].time)>15*60000)segments.push([]);const xy=waterXY(rows,i);segments.at(-1).push(xy.x+','+xy.y);}
+ const paths=segments.map(points=>points.length>1?'<polyline points="'+points.join(' ')+'" fill="none" stroke="#2563eb" stroke-width="3"/>':'<circle cx="'+points[0].split(',')[0]+'" cy="'+points[0].split(',')[1]+'" r="3" fill="#2563eb"/>').join('');
+ const indices=[...new Set([0,Math.floor((rows.length-1)/2),rows.length-1])],multipleDays=rows[0].time.slice(0,8)!==rows.at(-1).time.slice(0,8);
+ const labels=indices.map(i=>'<text x="'+waterXY(rows,i).x+'" y="194" text-anchor="middle" fill="#64748b" font-size="11">'+(multipleDays?rows[i].time.slice(4,6)+'/'+rows[i].time.slice(6,8)+' ':'')+rows[i].time.slice(8,10)+':'+rows[i].time.slice(10,12)+'</text>').join('');
+ $('chart_'+zone).innerHTML='<svg viewBox="0 0 800 210" role="img" aria-label="실제 관측 수위 그래프, 단위 미터"><text x="55" y="16" fill="#64748b" font-size="12">관측 수위 · m</text>'+grid+paths+labels+'<line id="water_cursor_'+zone+'" y1="28" y2="165" stroke="#7c3aed" stroke-dasharray="4 3"/><circle id="water_dot_'+zone+'" r="5" fill="#7c3aed" stroke="#fff" stroke-width="2"/></svg>';
+ const selected=states[zone]?.waterSelectedTime,found=selected?rows.findIndex(r=>r.time===selected):-1;selectWaterPoint(zone,found<0?rows.length-1:found);
+}
+
+function renderWater(zone,data,error) {
+  renderWaterDetails(zone,data,error);
+  const badge=document.querySelector(`#${zone} .api-status`);
+  badge.className='api-status'+(data&&!data.demo&&!data.stale?' live':'');
+  if(!data) {
+    document.querySelector(`#${zone} .level-left .dash-title`).textContent=`${zones[zone].station} 참고 관측소`;
+    badge.textContent='수위 미연결'; text(`val_level_${zone}`,'— m');text(`diff_level_${zone}`,'비교 자료 없음');text(`time_level_${zone}`,reason(error));text(`trend_${zone}`,'자료 없음');$(`trend_${zone}`).className='trend-badge flat';renderChart(zone,[],false);return;
+  }
+  const last=data.rows.at(-1), t=trend(data.rows.map(r=>r.value));
+  badge.textContent=data.demo?'예시 · 실제 관측값 아님':data.stale?'HRFCO · 오래된 관측':'HRFCO · 관측 데이터';
+  document.querySelector(`#${zone} .level-left .dash-title`).textContent=`${data.station} 수위${data.demo?'': ' (참고 관측소)'}`;
+  text(`val_level_${zone}`,`${last.value.toFixed(2)} m`);
+  text(`diff_level_${zone}`,`${data.demo?'예시 · ':''}${waterSummary(data.rows)}`);
+  text(`time_level_${zone}`,`${data.demo?'가상 시각':'관측 시각'}: ${stamp(last.time)}${data.stale?' · 1시간 이상 경과':''}${data.cached?' · 최근 저장 관측 사용':''}`);
+  text(`trend_${zone}`,`${data.demo?'예시 · ':''}${t.label}`);$(`trend_${zone}`).className=`trend-badge ${t.cls}`;
+  renderChart(zone,data.rows,data.demo);
+}
+
+function riverIsFresh(data){
+ const s=data?.summary,age=Date.now()-parseStamp(s?.waterTime);return !!s&&Number.isFinite(s.currentLevelM)&&Number.isFinite(age)&&age>=-60000&&age<3600000&&!data.water?.stale&&!data.water?.demo;
+}
+function syncRiverMotion(zone){
+ const card=$('river_summary_'+zone);if(!card)return;const data=states[zone]?.river,s=data?.summary,known=riverIsFresh(data)&&s.state!=='unknown';
+ const reduced=!!riverMotionPreference?.matches,paused=!!riverPaused[zone];
+ card.dataset.animate=String(known&&!paused&&!reduced&&!document.hidden&&navigator.onLine&&zone===activeZone&&s.motion!=='paused');
+ const button=document.querySelector('[data-river-pause="'+zone+'"]');if(button){button.setAttribute('aria-pressed',String(paused));button.disabled=!known||reduced;button.textContent=reduced?'동작 줄이기 적용':paused?'움직임 재생':'움직임 멈춤';}
+}
+function seedRiverWater(zone,state,water){
+ const previous=state.river,previousFresh=riverIsFresh(previous);if(!water||water.demo||!Array.isArray(water.rows))return false;if(previousFresh&&previous.summary?.state!=='unknown'&&previous.summary?.waterTime>=water.rows.at(-1)?.time)return false;
+ const now=Date.now(),byTime=new Map();for(const row of water.rows){const at=parseStamp(row.time);if(typeof row.value==='number'&&Number.isFinite(row.value)&&Number.isFinite(at)&&at>=now-24*3600000&&at<=now+60000)byTime.set(row.time,{time:row.time,value:row.value});}
+ const rows=[...byTime.values()].sort((a,b)=>a.time.localeCompare(b.time)),last=rows.at(-1),age=now-parseStamp(last?.time);if(!last||!Number.isFinite(age)||age>24*3600000||age<-60000)return false;
+ const previousTime=previous?.summary?.waterTime;if(Number.isFinite(parseStamp(previousTime))&&last.time<previousTime)return false;
+ const average=waterAverage(rows),delta=age<3600000?waterDelta(rows,60):null;if(previousFresh&&previous.summary?.state==='unknown'&&delta===null)return false;const delta10=waterDelta(rows,10),status=delta===null?'unknown':delta>=2?'rising':delta<=-2?'falling':'steady',title=status==='rising'?'수위가 올라가고 있어요':status==='falling'?'수위가 내려가고 있어요':status==='steady'?'수위 변화가 작아요':'수위 실측을 먼저 확인했어요';
+ const comparison=delta===null?'1시간 전 비교값이 없어 변화 방향은 판단하지 않습니다.':delta===0?'실제 수위는 1시간 전과 같은 높이입니다.':'실제 수위가 직전 1시간보다 '+(delta>0?delta+' cm 상승':Math.abs(delta)+' cm 하강')+'했습니다.';
+ state.river={zone,provisional:true,water:{...water,rows},dam:null,rain:null,tides:null,checkedAt:water.checkedAt||water.receivedAt||null,summary:{version:'river-summary-v1',state:status,title,description:'확보된 수위 실측 우선 · 영향 요인 분석 중. '+comparison,currentLevelM:last.value,averageLevelM:average.value,change10mCm:delta10,change1hCm:delta,relativeLevel:null,waterTime:last.time,rangeHours:24,sampleCount:rows.length,motion:status==='rising'?'up':status==='falling'?'down':status==='steady'?'still':'paused',factors:[],peak:{available:false},confidence:{status:'partial',label:'확보된 실제 관측 '+rows.length+'건 우선 · 영향 요인 분석 중'}}};
+ renderRiver(zone,state.river,state.riverError,!!state.riverBusy);return true;
+}
+
+function riverFactorFresh(data,id){
+ const source=data?.[id==='tide'?'tides':id];if(!source||source.demo||source.stale)return false;
+ if(id==='tide')return source.day===kst().slice(0,8)&&Array.isArray(source.rows)&&source.rows.length>0;
+ const age=Date.now()-parseStamp(source.rows?.at(-1)?.time);return Number.isFinite(age)&&age>=-60000&&age<3600000;
+}
+function riverPeakCurrent(data){if(data?.profile!=='history'||!data.historyReady)return false;const end=data?.summary?.peak?.windowEnd,at=/^\d{12}$/.test(String(end))?parseStamp(String(end)):Date.parse(end);return riverIsFresh(data)&&!!data.summary?.peak?.available&&['tide','dam','rain'].every(id=>riverFactorFresh(data,id))&&Number.isFinite(at)&&at>=Date.now();}
+function riverDisplayFactor(data,id){
+ if(!riverIsFresh(data)||!riverFactorFresh(data,id))return null;const s=data.summary,factor=s.factors?.find(f=>f.id===id);if(!factor)return null;
+ if(id==='tide'&&s.peak?.available&&!riverPeakCurrent(data))return {...factor,value:'공식 고·저조 예보',status:'reference',detail:'오늘 인천 조석 예보입니다. 고수위 후보 시간대가 지났거나 방류·강수 최신 자료를 확인하지 못해 현장 고수위 시간 환산은 보류합니다.'};
+ return factor;
+}
+function syncAllRiverMotion(){for(const zone of Object.keys(zones)){if(states[zone]?.river){const status=$('river_request_'+zone),phase=status?.dataset.phase,message=status?.textContent;renderRiver(zone,states[zone].river);if(status&&['pending','error'].includes(phase)){status.dataset.phase=phase;status.textContent=message;}}else{syncRiverMotion(zone);renderFishingBrief(zone);}}}
+function renderRiver(zone,data,error,pending=false){
+ const card=$('river_summary_'+zone);if(!card)return;const s=data?.summary,fresh=riverIsFresh(data),statesAllowed=['rising','falling','high_hold','low_hold','steady','unknown'];
+ const valid=fresh&&statesAllowed.includes(s?.state)&&s.state!=='unknown',state=valid?s.state:'unknown',motion=valid&&['up','down','still'].includes(s.motion)?s.motion:'paused';card.dataset.state=state;card.dataset.motion=motion;
+ text('river_profile_'+zone,data?.profile==='history'?(data.historyReady?'24시간 정밀 분석':'24시간 정밀 분석 · 확보 자료 우선'):data?.provisional?'수위 실측 우선 · 종합 자료 확인 중':'최근 6시간 빠른 종합');
+ text('river_title_'+zone,valid?s.title:fresh?'수위 변화 비교 중':s?.waterTime?'마지막 수위 기록':pending||states[zone]?.waterBusy?'수위 조회 중':'수위 연결 지연');
+ text('river_level_'+zone,Number.isFinite(s?.currentLevelM)?s.currentLevelM.toFixed(2)+' m':'— m');
+ text('river_change_'+zone,fresh&&Number.isFinite(s?.change1hCm)?signedCm(s.change1hCm):'비교 자료 없음');
+ const near=fishingWaterHour(zone,data);text('river_average_'+zone,Number.isFinite(near.averageLevelM)?near.averageLevelM.toFixed(2)+' m':'— m');text('river_average_label_'+zone,near.sampleCount===7?'직전 1시간 평균':'1시간 내 확보 평균');
+ text('river_description_'+zone,valid?s.description:fresh?(s?.description||'관측값은 확보했지만 변화 방향을 판단할 비교 자료가 부족합니다.'):'최신 관측을 확인하기 전에는 수위 방향과 물때 영향을 판단하지 않습니다.');
+ const relative=fresh&&data?.profile==='history'&&data.historyReady&&Number.isFinite(s?.relativeLevel)?Math.max(0,Math.min(1,s.relativeLevel)):null,y=relative===null?104:Math.round(138-relative*70);
+ $('river_fill_'+zone).setAttribute('y',String(y));$('river_fill_'+zone).setAttribute('height',String(180-y));
+ const wave=(yy)=>'M-10 '+yy+' Q15 '+(yy-5)+' 40 '+yy+' T90 '+yy+' T140 '+yy+' T190 '+yy+' T240 '+yy+' T290 '+yy+' T340 '+yy+' T390 '+yy+' T440 '+yy;
+ $('river_wave_'+zone).setAttribute('d',wave(y));$('river_wave_soft_'+zone).setAttribute('d',wave(y+10));text('river_arrow_'+zone,motion==='up'?'↑':motion==='down'?'↓':'—');
+ $('river_scene_'+zone).setAttribute('aria-label',(valid?s.title:'수위 방향 확인 필요')+(fresh&&Number.isFinite(s?.currentLevelM)?', 관측 수위 '+s.currentLevelM.toFixed(2)+' 미터':'')+(relative!==null?', 최근 24시간 범위의 상대 높이 '+Math.round(relative*100)+'퍼센트':', 상대 높이 자료 부족')+'. 수심 또는 유속을 나타내지 않습니다.');
+ text('river_scale_'+zone,relative===null?(data?.profile==='quick'?'6시간 실측으로 변화 방향 표시 · 24시간 정밀 분석 후 상대 높이 확인':data?.provisional?'24시간 전체 범위 확인 중 · 중립 장면 · 실제 수심 아님':'24시간 비교 자료 부족 · 중립 장면 · 실제 수심이나 유속을 표시하지 않음'):'최근 24시간 관측 범위의 상대 높이 · 실제 수심이나 유속이 아님');
+ const labels={tide:'조석 참고',dam:'팔당 방류',rain:'강수'};
+ $('river_factors_'+zone).innerHTML=['tide','dam','rain'].map(id=>{const factor=riverDisplayFactor(data,id),status=factor&&['aligned','reference','changed','missing'].includes(factor.status)?factor.status:'missing';return '<div class="river-factor" data-status="'+status+'" title="'+escapeHTML(factor?.detail||'연결된 공식 자료를 확인 중입니다.')+'"><span>'+labels[id]+'</span><strong>'+escapeHTML(factor?.value||'자료 확인 필요')+'</strong></div>';}).join('');
+ text('river_factor_detail_'+zone,['tide','dam','rain'].map(id=>{const factor=riverDisplayFactor(data,id);return labels[id]+': '+(factor?.detail||(id==='tide'?'오늘 인천 조석 예보를 확인하지 못했습니다.':'1시간 이내 최신 관측을 확인하지 못해 현재 요인 해석에서 제외합니다.'));}).join('\n'));
+ const peak=$('river_peak_'+zone),showPeak=riverPeakCurrent(data);peak.hidden=!showPeak;if(showPeak){const peakTime=value=>{if(/^\d{12}$/.test(String(value)))return stamp(String(value));const date=new Date(value);return Number.isNaN(date.getTime())?'시각 확인 필요':date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})+' KST';};const window=s.peak.windowStart&&s.peak.windowEnd?peakTime(s.peak.windowStart)+' ~ '+peakTime(s.peak.windowEnd):'예상 시각 범위 확인 필요';peak.textContent=(s.peak.label||'조석에 따른 고수위 참고 구간')+' · '+window+(s.peak.reason?' · '+s.peak.reason:'');}
+ const time=s?.waterTime?stamp(s.waterTime):'관측 시각 확인 중',confidence=data?.provisional?s?.confidence?.label:fresh&&!['tide','dam','rain'].every(id=>riverFactorFresh(data,id))?'일부 요인 지연 · 실측 추세 참고':s?.confidence?.label||'비교 자료 확인 중';text('river_source_'+zone,(data?.water?.station||zones[zone].station)+' · '+time+'\n'+(s?.waterTime?'15분 지연 기준 · '+waterAgeLabel(s.waterTime)+' · ':'')+(fresh?confidence:s?.waterTime?'오래된 관측 유지 · 움직임 중단':states[zone]?.waterBusy?'관측 조회 중':'연결 지연 · 움직임 중단'));
+ const status=$('river_request_'+zone);status.dataset.phase=error?'error':pending?'pending':'success';
+ const checked=data?.checkedAt||data?.receivedAt,label=checked&&!Number.isNaN(Date.parse(checked))?new Date(checked).toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour12:false})+' KST':'';
+ const mode=states[zone]?.riverMode||'quick',scope=mode==='history'?'24시간 정밀 분석':'빠른 종합';
+ status.textContent=error?scope+' 확인 지연 · '+reason(error)+(fresh?' · 확보된 최근 실측을 유지합니다.':' · 다시 조회해 주세요.'):pending?(mode==='history'?'24시간 수위·강수 이력을 정밀 분석합니다. 빠른 종합의 실측은 계속 표시합니다.':'최근 6시간 수위·방류와 최근 강수·오늘 조석을 빠르게 확인합니다.'):(label?'확인 '+label+' · ':'')+(data?.provisional?'확보된 수위 실측 우선 · 영향 요인 분석 중':data?.profile==='history'?(data.historyReady?'24시간 이력 정밀 분석 완료':'확보된 24시간 내 자료 표시 · 누락 자료가 있어 상대 높이·후보 시간 판단 보류'):'최근 6시간 빠른 종합 · 24시간 이력은 정밀 분석 버튼으로 확인')+(data?.warnings?.length?' · 일부 자료 확인 지연':'');
+ renderFishingBrief(zone,data);refreshWaterTimeline();
+ syncRiverMotion(zone);
+}
+/** Experimental gauge-stage turning estimate. Never a tidal-current forecast.
+ * Only the seven ten-minute observations ending at the newest gauge sample
+ * enter the fit. Tide offsets, future samples and selected chart periods do not.
+ */
+function estimateWaterTurn(water,now=Date.now()){
+ const minute=60000,step=10*minute;
+ const stamp=ms=>new Date(ms+9*60*minute).toISOString().slice(0,16).replace(/[-T:]/g,'');
+ const parse=value=>{const s=String(value??'');if(!/^\d{12}$/.test(s))return NaN;const ms=Date.parse(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)+'T'+s.slice(8,10)+':'+s.slice(10,12)+':00+09:00');return Number.isFinite(ms)&&stamp(ms)===s?ms:NaN;};
+ const numeric=value=>value!==null&&value!==undefined&&String(value).trim()!==''&&Number.isFinite(Number(value));
+ const round=(value,n=2)=>Number(value.toFixed(n));
+ const out={version:'stage-turn-1h-v1',kind:'gauge-stage-turn',basisMinutes:60,horizonMinutes:60,currentReversalVerified:false,status:'insufficient',anchorTime:null,from:null,through:null,sampleCount:0,averageLevelM:null,change1hCm:null,trend:'unknown',event:null,reason:'직전 1시간의 10분 관측 7개가 필요합니다.'};
+ if(!Number.isFinite(now)||!water||water.demo||water.stale||!Array.isArray(water.rows))return out;
+ const map=new Map();for(const row of water.rows){const at=parse(row?.time);if(!Number.isFinite(at)||at>now+minute||at<now-2*60*minute||!numeric(row?.value)||Number(row.value)<=-90)continue;map.set(at,{time:String(row.time),at,value:Number(row.value)});}
+ const valid=[...map.values()].sort((a,b)=>a.at-b.at),last=valid.at(-1);if(!last)return out;
+ const rows=valid.filter(row=>row.at>=last.at-60*minute);
+ Object.assign(out,{anchorTime:last.time,from:rows[0]?.time||null,through:last.time,sampleCount:rows.length,averageLevelM:rows.length>=2?round(rows.reduce((sum,row)=>sum+row.value,0)/rows.length,4):null});
+ if(now-last.at>=25*minute)return {...out,status:'stale',reason:'최신 관측이 25분 이상 지연되어 단기 추정을 멈춥니다.'};
+ if(rows.length!==7||rows.some((row,i)=>i&&row.at-rows[i-1].at!==step))return out;
+ const values=rows.map(row=>row.value*100),span=Math.max(...values)-Math.min(...values),delta=values[6]-values[0];
+ Object.assign(out,{averageLevelM:round(values.reduce((a,b)=>a+b,0)/700,4),change1hCm:round(delta),trend:delta>=2?'rising':delta<=-2?'falling':'steady'});
+ if(rows.some((row,i)=>i&&Math.abs(values[i]-values[i-1])>20))return {...out,status:'unstable',reason:'급격한 수위 변화가 있어 단기 곡선 추정을 보류합니다.'};
+ if(span<2)return {...out,status:'steady',reason:'직전 1시간의 수위 변동이 2 cm 미만인 정체 구간입니다.'};
+ // A reversal already present in the last hour is observed, not predicted.
+ // Require >=2cm on both sides; plateaus get an observed interval, not a point.
+ let observed;
+ for(let i=2;i<=4;i++){
+  const before=values.slice(0,i+1),after=values.slice(i),level=values[i];
+  const peak=level-Math.min(...before)>=2&&level-Math.min(...after)>=2&&level>=Math.max(...before)-0.1&&level>=Math.max(...after)-0.1;
+  const low=Math.max(...before)-level>=2&&Math.max(...after)-level>=2&&level<=Math.min(...before)+0.1&&level<=Math.min(...after)+0.1;
+  if(!peak&&!low)continue;
+  const plateau=rows.filter((row,j)=>Math.abs(values[j]-level)<0.1);
+  observed={type:peak?'peak':'trough',center:rows[i].time,windowStart:plateau[0].time,windowEnd:plateau.at(-1).time,observed:true};
+ }
+ if(observed)return {...out,status:'observed',event:observed,reason:'직전 1시간 안에서 수위 방향 전환을 관측했습니다. 유속 반전 확인은 아닙니다.'};
+ const fit=points=>{
+  const n=points.length,mid=(n-1)/2,mean=points.reduce((a,b)=>a+b,0)/n,x=points.map((_,i)=>i-mid),s2=x.reduce((s,v)=>s+v*v,0),q=x.map(v=>v*v-s2/n),b=x.reduce((s,v,i)=>s+v*(points[i]-mean),0)/s2,c=q.reduce((s,v,i)=>s+v*(points[i]-mean),0)/q.reduce((s,v)=>s+v*v,0);
+  const residual=Math.sqrt(points.reduce((s,v,i)=>s+(v-(mean+b*x[i]+c*q[i]))**2,0)/n),speed=b+2*c*mid,eta=Math.abs(c)>1e-9?-speed/(2*c)*10:Infinity;
+  return {residual,speed,acceleration:2*c,eta};
+ };
+ const fitted=fit(values),tail6=fit(values.slice(1)),tail5=fit(values.slice(2));
+ const recent=(values[6]-values[4])/2,previous=(values[4]-values[2])/2,direction=Math.sign(fitted.speed);
+ const stable=fitted.residual<=0.75&&tail6.residual<=0.75&&tail5.residual<=0.75;
+ const slowing=Math.abs(fitted.speed)>=0.1&&Math.abs(fitted.acceleration)>=0.04&&fitted.speed*fitted.acceleration<0&&recent*direction>=0&&previous*direction>0&&Math.abs(previous)-Math.abs(recent)>=0.25;
+ const fits=[fitted,tail6,tail5],consistent=fits.every(f=>Number.isFinite(f.eta)&&f.eta>0&&f.eta<=60&&Math.sign(f.speed)===direction)&&Math.max(...fits.map(f=>f.eta))-Math.min(...fits.map(f=>f.eta))<=20;
+ if(!stable)return {...out,status:'unstable',reason:'최근 1시간 수위 변동이 불규칙해 전환 시각을 보류합니다.'};
+ if(!slowing||!consistent)return {...out,status:'no_turn',reason:'직전 1시간 수위에서 다음 1시간 내 전환을 뒷받침하는 감속 신호가 없습니다.'};
+ const eta=fits.map(f=>f.eta).sort((a,b)=>a-b)[1],center=Math.round((last.at+eta*minute)/step)*step;
+ // Display resolution, not a calibrated statistical confidence interval.
+ const start=Math.floor((center-20*minute)/step)*step,end=Math.ceil((center+20*minute)/step)*step;
+ if(end<=now||center<now-10*minute)return {...out,status:'no_turn',reason:'관측 지연으로 추정 전환 구간이 지났습니다. 새 관측을 기다립니다.'};
+ return {...out,status:'predicted',event:{type:fitted.acceleration<0?'peak':'trough',center:stamp(center),windowStart:stamp(Math.max(last.at,start)),windowEnd:stamp(Math.min(last.at+60*minute,end)),observed:false,displayMarginMinutes:20},reason:'최근 1시간 수위의 감속 곡선을 연장한 실험 추정입니다. 표시 여유 ±20분은 검증된 오차범위가 아니며, 실제 물돌이 시각은 확인되지 않았습니다.'};
+}
+
+function fishingWaterHour(zone,data=states[zone]?.river){
+ const choices=[data?.water,states[zone]?.water].filter(Boolean).map(water=>estimateWaterTurn(water)).filter(value=>value.anchorTime);
+ choices.sort((a,b)=>b.anchorTime.localeCompare(a.anchorTime)||b.sampleCount-a.sampleCount);
+ return choices[0]||estimateWaterTurn(null);
+}
+function renderWaterTurn(zone,turn){
+ text('fishing_slack_label_'+zone,'물돌이 참고 · 수위 추정');
+ const event=turn.event,clock=fishingClock,from=turn.from?clock(turn.from):'',through=turn.through?clock(turn.through):'';
+ let value='관측 보강 중',note='직전 1시간의 10분 관측 7개 필요',status='missing';
+ if(turn.status==='predicted'&&event){value=clock(event.center)+' 전후';note='수위 전환 추정 · 실험 / 신뢰 낮음';status='predicted';}
+ else if(turn.status==='observed'&&event){value=clock(event.center)+' 관측';note=(event.type==='peak'?'상승 → 하강':'하강 → 상승')+' · 수위 전환 확인';status='observed';}
+ else if(turn.status==='steady'){value='수위 정체 중';note='직전 1시간 변동 2 cm 미만';status='steady';}
+ else if(turn.status==='no_turn'){value='전환 신호 없음';note='1시간 내 전환을 추정할 감속 신호 없음';status='steady';}
+ else if(turn.status==='unstable'){value='변동 불규칙';note='시각 추정 보류 · 새 관측 확인';}
+ else if(turn.status==='stale'){value='새 관측 대기';note='최신 관측 25분 경과 · 추정 중단';}
+ text('fishing_slack_'+zone,value);text('fishing_slack_note_'+zone,note);$('fishing_card_slack_'+zone).dataset.status=status;
+ const basis=from&&through?'기준 '+from+'–'+through+' · '+turn.sampleCount+'/7개 관측':'직전 1시간 수위 기준';
+ const window=event&&turn.status==='predicted'?'후보 '+clock(event.windowStart)+'–'+clock(event.windowEnd)+' · ':'';
+ text('fishing_water_next_'+zone,window+basis+' · 실제 물돌이 미확인');
+ const counts={ttukseom:[55,24],yanghwa:[31,7],mangwon:[48,17],banpo:[51,14]},evidence=counts[zone];const explanation=$('fishing_turn_detail_'+zone);if(explanation)explanation.textContent=turn.reason+(turn.status==='predicted'&&evidence?' 해당 관측소의 2026년 10월 6~15일 이력 점검에서는 후보 '+evidence[0]+'회 중 20분 표시 범위 안에서 수위 전환을 확인한 경우가 '+evidence[1]+'회였습니다. 연속 후보는 서로 독립된 검증 사례가 아니며 다른 시기의 정확도를 뜻하지 않습니다.':'');
+}
+
+function fishingClock(time){return /^\d{12}$/.test(String(time))?time.slice(8,10)+':'+time.slice(10,12):'시각 확인 필요';}
+
+/** Coarse Incheon-to-Cheongdam stage reference, never a current prediction. */
+function estimateTideArrival(tides,now=Date.now(),zone='ttukseom'){
+ const minute=60000,hour=60*minute;
+ const stamp=ms=>new Date(ms+9*hour).toISOString().slice(0,16).replace(/[-T:]/g,'');
+ const parse=value=>{const s=String(value??'');if(!/^\d{12}$/.test(s))return NaN;const at=Date.parse(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)+'T'+s.slice(8,10)+':'+s.slice(10,12)+':00+09:00');return Number.isFinite(at)&&stamp(at)===s?at:NaN;};
+ const unavailable=reason=>({version:'incheon-stage-reference-v1',available:false,currentReversalVerified:false,reason});
+ if(zone!=='ttukseom')return unavailable('다른 구역에 뚝섬·청담 보정을 적용하지 않습니다.');
+ if(!Number.isFinite(now)||!tides||tides.demo||tides.stale||tides.day!==stamp(now).slice(0,8))return unavailable('오늘 인천 공식 조석 예보를 확인합니다.');
+ if(now>=parse('202611150000'))return unavailable('9~10월 시차 분석의 참고 기간이 지나 보정 재점검이 필요합니다.');
+ const map=new Map();for(const row of [...(tides.rows||[]),...(tides.nearbyRows||[])]){
+  const at=parse(row?.time);if(!Number.isFinite(at)||at<now-30*hour||at>now+48*hour||!Number.isFinite(row.height)||!['만조','간조'].includes(row.type))continue;
+  map.set(row.time,{...row,at});
+ }
+ const rows=[...map.values()].sort((a,b)=>a.at-b.at),events=[];
+ for(const low of rows.filter(row=>row.type==='간조')){
+  const high=rows.find(row=>row.type==='만조'&&row.at>low.at&&row.at-low.at<10*hour);if(!high)continue;
+  const center=Math.round((low.at+385*minute)/(10*minute))*10*minute,start=low.at+360*minute,end=low.at+510*minute;
+  if(end<now||center>now+30*hour)continue;
+  events.push({referenceLow:low.time,referenceHigh:high.time,referenceHighCm:high.height,center:stamp(center),windowStart:stamp(start),windowEnd:stamp(end),inWindow:now>=start&&now<=end,upperStageCenter:stamp(Math.round((high.at+278.5*minute)/(5*minute))*5*minute),weakTide:high.height<=650});
+ }
+ const event=events.sort((a,b)=>a.windowStart.localeCompare(b.windowStart))[0];
+ if(!event)return unavailable('다음 상승쪽을 계산할 인천 간조·만조 예보를 확인합니다.');
+ return {version:'incheon-stage-reference-v1',available:true,currentReversalVerified:false,event,calibration:{from:'20260916',through:'20261015',lowPairs:42,lowMedianMinutes:385,displayLowMinutes:360,displayHighMinutes:510,highMedianMinutes:278.5,expires:'202611150000'},confidence:'coarse-reference',reason:'인천 간조에서 청담의 낮은 수위까지 관측된 42건의 중앙 시차 6시간25분을 상승쪽 참고로 사용합니다. 실제 밀물 최초 도달이나 유속 반전 관측이 아닙니다. 6~8시간30분 범위는 거친 표시 구간이며 통계적 신뢰구간이 아닙니다.'};
+}
+
+function renderTideReference(zone,tides,data){
+ const estimate=estimateTideArrival(tides,Date.now(),zone);if(!estimate.available)return;
+ const event=estimate.event,today=kst().slice(0,8),dayTime=time=>(time.slice(0,8)===today?'':time.slice(4,6)+'/'+time.slice(6,8)+' ')+fishingClock(time);
+ const fresh=riverIsFresh(data),waterNote=fresh?'1시간 수위도 함께 확인':'수위 미확인 · 조석 보정만';
+ text('fishing_slack_label_'+zone,'물돌이 예상 · 인천 조석 보정');
+ text('fishing_slack_'+zone,event.inWindow?'지금 전후':dayTime(event.center)+' 전후');
+ text('fishing_slack_note_'+zone,'상승쪽 참고 · 간조 + 약 6시간 25분');
+ $('fishing_card_slack_'+zone).dataset.status='tide-reference';
+ text('fishing_water_next_'+zone,'예상 범위 '+dayTime(event.windowStart)+'–'+dayTime(event.windowEnd)+' · '+waterNote+' · 실제 물돌이 미확인');
+ const explanation=$('fishing_turn_detail_'+zone);if(explanation)explanation.textContent='물돌이 예상 · 인천 조석 보정: 인천 간조 '+dayTime(event.referenceLow)+' → 청담 낮은 수위 참고 '+dayTime(event.center)+' (10분 단위 반올림). 2026년 9월 16일~10월 15일 42개 저수위 대응 사건의 중앙 시차 6시간25분을 사용합니다. 밀물 영향이 도달한 첫 순간을 직접 측정한 값은 아니며, 수위가 낮아진 뒤 상승하는 쪽을 가늠하는 대용 시각입니다. 예상 범위는 간조 +6시간~8시간30분의 거친 참고 구간이며 신뢰구간이 아닙니다. '+(event.weakTide?'다음 인천 만조 높이가 낮아 조석 신호가 약할 수 있습니다. ':'')+'별도 고수위 참고: 인천 만조 '+dayTime(event.referenceHigh)+' + 약4시간40분 → '+dayTime(event.upperStageCenter)+'. 이 만조 시차를 밀물 시작이나 간조에 그대로 적용하지 않았습니다. 강수·팔당 방류·잠실 수중보 영향에 따라 달라지며 실제 유속 반전은 확인하지 못합니다. '+(tides.nearbyIncomplete?'일부 인접 날짜의 예보는 조회되지 않았습니다. ':'')+'보정 재점검 기한: 2026년 11월 15일.';
+}
+function syncWindMotion(zone,wind){
+ const scene=$('fishing_wind_motion_'+zone);if(!scene)return;
+ const moving=!!wind&&wind.level>0&&!riverMotionPreference.matches&&!document.hidden&&navigator.onLine&&activeZone===zone&&!riverPaused[zone];
+ scene.dataset.level=wind?String(wind.level):'unknown';scene.dataset.animate=String(moving);
+ const button=document.querySelector?.('[data-river-pause="'+zone+'"]');if(button&&wind?.level>0){button.disabled=riverMotionPreference.matches;button.setAttribute('aria-pressed',String(!!riverPaused[zone]));button.textContent=riverMotionPreference.matches?'동작 줄이기 적용':riverPaused[zone]?'움직임 재생':'움직임 멈춤';}
+ scene.setAttribute('aria-label',wind?'바람 '+wind.label+' · 세기를 나타내는 '+(moving?'움직임':'정지 그림')+' · 풍향 표시는 아님':'최신 풍속 자료 없음 · 움직임 중단');
+}
+
+function fishingWind(speed){
+ if(!Number.isFinite(speed)||speed<0)return null;
+ const level=speed<0.3?0:speed<1.6?1:speed<3.4?2:speed<8?3:4;
+ return {level,label:['없음','조금','약간','중간','강풍'][level]};
+}
+function fishingRain(weather,now=Date.now()){
+ const source=weather?.probabilityForecast,age=now-parseStamp(source?.issuedAt),first=Math.floor(now/3600000)*3600000+3600000;
+ const expected=Array.from({length:5},(_,i)=>kst(new Date(first+i*3600000)));
+ if(weather?.demo||!Number.isFinite(age)||age<0||age>6*3600000)return {available:false,label:'예보 갱신 필요',count:0};
+ const rows=expected.map(time=>source.rows?.find(row=>row.time===time&&Number.isFinite(row.pop)&&row.pop>=0&&row.pop<=100));
+ const count=rows.filter(Boolean).length;if(count!==5)return {available:false,label:'예보 '+count+'/5시간 확보',count};
+ return {available:true,value:Math.max(...rows.map(row=>row.pop)),from:expected[0],to:expected.at(-1),count};
+}
+function renderFishingBrief(zone,data=states[zone]?.river,weather=states[zone]?.weather){
+ const card=$('fishing_brief_'+zone);if(!card)return;
+ const set=(id,value,note,status='missing')=>{text('fishing_'+id+'_'+zone,value);text('fishing_'+id+'_note_'+zone,note);$('fishing_card_'+id+'_'+zone).dataset.status=status;};
+ const turn=fishingWaterHour(zone,data);renderWaterTurn(zone,turn);renderTideReference(zone,states[zone]?.tide||data?.tides,data);
+ const summary=data?.summary,fresh=riverIsFresh(data),change=summary?.change1hCm,loading=states[zone]?.waterBusy,oldTime=summary?.waterTime;
+ if(fresh&&Number.isFinite(change)){
+  const label=change>=2?'상승 중':change<=-2?'하강 중':'변화 작음',status=change>=2?'rising':change<=-2?'falling':'steady';
+  set('water',label,fishingClock(summary.waterTime)+' · '+waterAgeLabel(summary.waterTime)+' · 1시간 변화 '+signedCm(change),status);
+ }else set('water',fresh?'비교 자료 부족':oldTime?'오래된 관측':loading?'수위 조회 중':'수위 연결 지연',oldTime?fishingClock(oldTime)+' · '+waterAgeLabel(oldTime):fresh?'정확히 1시간 전 관측 확인 중':loading?'15분 지연 기준으로 확인합니다':'마지막 수신 자료를 기다립니다');
+
+ const rain=fishingRain(weather);
+ set('rain',rain.available?rain.value+'%':'—%',rain.available?'시간별 최대 · '+fishingClock(rain.from)+'–'+fishingClock(rain.to):rain.label,rain.available?(rain.value>=60?'wet':'ready'):'missing');
+ const age=Date.now()-parseStamp(weather?.time),wind=!weather?.demo&&Number.isFinite(age)&&age>=-60000&&age<2*3600000?fishingWind(weather?.wind):null;
+ set('wind',wind?.label||'자료 확인 필요',wind?weather.wind.toFixed(1)+' m/s · '+(weather.direction||'풍향 없음')+' · '+fishingClock(weather.time)+' 관측':'기상청 최근 실황을 확인합니다',wind?(wind.level===4?'strong':'ready'):'missing');
+ syncWindMotion(zone,wind);
+ $('fishing_wind_scale_'+zone).innerHTML=Array.from({length:5},(_,i)=>'<i'+(wind&&i<=wind.level?' class="on"':'')+'></i>').join('');
+}
+
+function riverIsHistoryReady(data){return data?.profile==='history'&&data.historyReady===true;}
+function riverCanReplace(previous,next){
+ if(!previous)return true;if(Number.isFinite(previous.summary?.currentLevelM)&&!Number.isFinite(next?.summary?.currentLevelM))return false;const before=previous.summary?.waterTime,after=next?.summary?.waterTime;
+ if(Number.isFinite(parseStamp(before))&&Number.isFinite(parseStamp(after))&&after<before)return false;
+ if(riverIsFresh(previous)&&!riverIsFresh(next))return false;
+ if(before===after&&riverIsFresh(previous)&&riverIsHistoryReady(previous)&&!riverIsHistoryReady(next))return false;
+ if(previous.provisional&&riverIsFresh(previous)&&previous.summary?.state!=='unknown'&&next?.summary?.state==='unknown'&&after<=before)return false;
+ return true;
+}
+function setRiverBusy(zone,state,busy,mode='quick'){
+ state.riverBusy=busy;state.riverMode=mode;
+ for(const [selector,idle,loading] of [['reload','빠른 종합 다시 조회','빠른 종합 중…'],['history','24시간 정밀 분석','24시간 분석 중…']]){const button=document.querySelector('[data-river-'+selector+'="'+zone+'"]');if(button){button.disabled=busy;button.setAttribute('aria-busy',String(busy&&((mode==='history')===(selector==='history'))));button.textContent=busy&&((mode==='history')===(selector==='history'))?loading:idle;}}
+}
+async function queryRiver(zone,state,current,{force=false,mode='quick'}={}){
+ if(!['quick','history'].includes(mode))return;const request={};state.riverRequest=request;state.riverError=null;setRiverBusy(zone,state,true,mode);renderRiver(zone,state.river,undefined,true);
+ try{const data=await serverData('river',zone,'GET',24,force,mode);if(!current()||state.riverRequest!==request)return;
+  if(data.water?.rows?.length){rememberWater(zone,data.water);state.waterRangeCache??={};const prior=state.waterRangeCache[6];if(!prior||data.water.rows.at(-1).time>=prior.rows.at(-1).time)state.waterRangeCache[6]={...data.water,hours:6};}const keep=!riverCanReplace(state.river,data);if(!keep)state.river=data;
+  state.riverError=riverIsFresh(state.river)?null:new Error('종합 수위 자료를 확인하지 못했습니다.');
+  if(keep&&(!riverIsFresh(data)||(data.summary?.state==='unknown'&&!riverIsHistoryReady(state.river))))state.riverError=new Error('영향 요인 종합 조회가 지연되어 확보된 실제 수위를 우선 표시합니다.');
+  renderRiver(zone,state.river,state.riverError);
+  if(keep&&riverIsHistoryReady(state.river)&&riverIsFresh(data)&&mode==='quick')text('river_request_'+zone,data.summary?.waterTime===state.river.summary?.waterTime?'빠른 종합 확인 완료 · 같은 관측 시각의 24시간 정밀 분석 결과를 유지합니다.':'더 오래된 빠른 조회 응답이어서 현재의 24시간 정밀 분석 결과를 유지합니다.');
+  else if(keep&&riverIsFresh(data)&&mode==='history'&&data.summary?.waterTime<state.river.summary?.waterTime)text('river_request_'+zone,'24시간 조회 자료의 수위 시각이 현재보다 오래되어 더 최근의 실제 수위를 유지합니다.');
+ }catch(e){if(current()&&state.riverRequest===request){state.riverError=e;renderRiver(zone,state.river,e);}}
+ finally{if(current()&&state.riverRequest===request)setRiverBusy(zone,state,false,mode);}
+}
+
+function weatherBase(now,forecast) {
+  // 실황은 매시 10분 이후, 초단기예보는 매시 45분 이후 조회. 5분 여유를 둔다.
+  const lag=forecast?50:15;
+  const s=kst(new Date(now-lag*60000));
+  return {base_date:s.slice(0,8),base_time:s.slice(8,10)+(forecast?'30':'00')};
+}
+function weatherItems(json) {
+  const r=json?.response;
+  if(String(r?.header?.resultCode)!=='00') throw new Error(`기상청 응답 오류 (${String(r?.header?.resultCode??'형식 확인').slice(0,10)})`);
+  const items=r?.body?.items?.item;
+  if(!Array.isArray(items)||!items.length) throw new Error('기상청 자료가 없습니다');
+  return items;
+}
+function weatherLabel(pty,sky) {
+  const rain={1:'비 🌧️',2:'비/눈 🌨️',3:'눈 ❄️',4:'소나기 🌦️',5:'빗방울',6:'빗방울/눈날림',7:'눈날림'};
+  return rain[pty] || ({1:'맑음 ☀️',3:'구름많음 ☁️',4:'흐림 ☁️'}[sky]) || (pty===0?'강수 없음':'강수 정보 없음');
+}
+function windDirection(value) {
+  if(!numeric(value)||Number(value)<0||Number(value)>360) return '풍향 자료 없음';
+  const names=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
+  return names[Math.round(Number(value)/22.5)%16]+'풍';
+}
+function rainLabel(value) {
+  if(value===undefined||value===null||String(value).trim()===''||String(value).startsWith('-')) return '강수량 자료 없음';
+  if(numeric(value)) return Number(value).toFixed(1)+' mm';
+  const label=String(value).trim();
+  return /^(강수없음|[\d.]+\s*mm(\s*(미만|이상))?|[\d.]+\s*[~～]\s*[\d.]+\s*mm)$/.test(label)?label:'강수량 자료 없음';
+}
+async function weatherData(zone){return serverData('weather',zone);}
+function renderWeatherPeriods(zone,data,error) {
+ const cards=data?.periods?.items||['3시간 후','5시간 후','내일','모레'].map((label,i)=>({label,id:['h3','h5','tomorrow','dayAfter'][i],unavailable:true}));
+ $('weather_periods_'+zone).innerHTML=cards.map(r=>{
+  const date=r.day?r.day.slice(4,6)+'/'+r.day.slice(6,8):r.time?r.time.slice(4,6)+'/'+r.time.slice(6,8)+' '+r.time.slice(8,10)+':'+r.time.slice(10,12):'';
+  if(r.unavailable)return '<div class="weather-mini unavailable"><b>'+escapeHTML(r.label)+'</b><small>'+escapeHTML(date)+'</small><strong>예보 조회 대기</strong><span class="period-meta">'+escapeHTML(data?.periods?.error||error?.message||'이 시간의 예보 자료 없음')+'</span></div>';
+  const daily=!!r.day,temp=daily?r.tempMin.toFixed(0)+'~'+r.tempMax.toFixed(0)+'°C':r.temp.toFixed(1)+'°C';
+  const wind=daily?'최대 바람 '+r.windMax.toFixed(1)+' m/s':'바람 '+r.wind.toFixed(1)+' m/s';
+  const rain=daily?(r.popMax===null?'강수확률 자료 없음':'시간별 강수확률 최대 '+r.popMax+'%'):'강수 '+r.rain+(r.pop===null||r.pop===undefined?'':' · '+r.pop+'%');
+  return '<div class="weather-mini"><b>'+escapeHTML(r.label)+'</b><small>'+escapeHTML(date)+'</small><strong>'+temp+'</strong><span>'+escapeHTML(r.desc)+'</span><span class="period-meta">'+escapeHTML(wind)+'</span><span class="period-meta">'+escapeHTML(rain)+'</span>'+(daily&&r.rangeSource==='hourly'?'<small>제공된 시간별 예보기온 범위</small>':'')+'</div>';
+ }).join('')+(data?.periods?.issuedAt?'<small style="grid-column:1/-1;color:#e0f2fe;font-size:10px">내일·모레: 기상청 '+stamp(data.periods.issuedAt)+' 발표</small>':'');
+}
+function renderWeather(zone,data,error) {
+  renderWeatherPeriods(zone,data,error);
+  renderFishingBrief(zone,states[zone]?.river,data);
+  if(!data) {text(`val_weather_${zone}`,'— °C');text(`val_wind_${zone}`,'— m/s');text(`desc_weather_${zone}`,'날씨 미연결');text(`desc_wind_${zone}`,'자료 없음');text(`time_weather_${zone}`,reason(error));text(`timeline_weather_${zone}`,'예보 없음');return;}
+  text(`val_weather_${zone}`,`${data.temp.toFixed(1)} °C`);text(`val_wind_${zone}`,`${data.wind.toFixed(1)} m/s`);text(`desc_weather_${zone}`,`${data.demo?'예시 · ':''}${data.desc} · 1시간 강수 ${data.rain||'자료 없음'}`);text(`desc_wind_${zone}`,data.demo?'가상 풍속':`${data.direction||'풍향 자료 없음'} · 격자 대표값`);
+  text(`time_weather_${zone}`,`${data.demo?'예시':'출처: 기상청 · 실황 기준'} ${stamp(data.time)} · 격자 ${zones[zone].nx},${zones[zone].ny}${data.cached?' · 최근 저장 관측 사용':''}`);
+  $(`timeline_weather_${zone}`).innerHTML=data.forecast.map(r=>`<div class="timeline-item"><div class="timeline-time">${r.time.slice(4,6)}/${r.time.slice(6,8)} ${r.time.slice(8,10)}시</div><div class="timeline-time">${data.demo?'예시':'예보'}</div><div class="timeline-icon" style="font-size:.8rem">${escapeHTML(r.desc)}</div><div class="timeline-temp">${r.temp.toFixed(1)}°</div><div class="timeline-wind">${r.wind.toFixed(1)}m/s</div><div class="timeline-time">${escapeHTML(r.direction||'풍향 없음')}</div><div class="timeline-time">${escapeHTML(r.rain||'강수량 없음')}</div></div>`).join('');
+  if(data.forecastError) text(`timeline_weather_${zone}`,`실황 조회 완료 · 예보 미연결: ${data.forecastError}`);
+}
+function normalTides(json,day) {
+  if(String(json?.header?.resultCode)!=='00') throw new Error(`조석 API 응답 오류 (${String(json?.header?.resultCode??'형식 확인').slice(0,10)})`);
+  const items=json?.body?.items?.item;
+  const array=Array.isArray(items)?items:items?[items]:[];
+  const rows=[];
+  for(const r of array) {
+    const time=String(r.predcDt??'').replace(/[- :T]/g,'').slice(0,12),code=Number(r.extrSe);
+    if(r.obsvtrNm!=='인천'||!Number.isFinite(parseStamp(time))||time.slice(0,8)!==day||!numeric(r.predcTdlvVl)||![1,2,3,4].includes(code)) continue;
+    rows.push({time,height:Number(r.predcTdlvVl),type:[1,3].includes(code)?'만조':'간조'});
+  }
+  if(!rows.length || rows.length!==array.length) throw new Error('인천 조석 예보의 시각·높이·지점 정보를 확인할 수 없습니다');
+  return rows.sort((a,b)=>a.time.localeCompare(b.time));
+}
+async function tideData(){return serverData('tides');}
+function renderTide(zone,data,error) {
+  renderFishingBrief(zone);
+  const day=data?.day||kst().slice(0,8);
+  text('date_'+zone,day.slice(0,4)+'. '+day.slice(4,6)+'. '+day.slice(6,8)+'. · 인천 고·저조 예보');
+  if(!data) {text('tide_summary_'+zone,reason(error));$('tide_'+zone).innerHTML='<tr><td colspan="4">'+escapeHTML(reason(error))+'</td></tr>';return;}
+  const next=data.rows.find(r=>r.time>=kst()),high=data.rows.filter(r=>r.type==='만조'),low=data.rows.filter(r=>r.type==='간조');
+  const range=high.length&&low.length?Math.max(...high.map(r=>r.height))-Math.min(...low.map(r=>r.height)):null;
+  const checked=data.checkedAt?new Date(data.checkedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false}):'';
+  $('tide_summary_'+zone).innerHTML=(range!==null?'오늘 고저조 차이<strong>'+range.toFixed(0)+' cm · '+(range/100).toFixed(2)+' m</strong>':'고저조 차이 비교 자료 부족<br>')+
+   (next?'다음 '+escapeHTML(next.type)+' '+next.time.slice(8,10)+':'+next.time.slice(10,12)+' · '+next.height.toFixed(0)+' cm':'오늘 남은 고·저조 없음')+
+   '<br><small>하루 최고·최저 예측조위 차 · 인천 기준<br>출처: 국립해양조사원'+(checked?' · 조회 '+escapeHTML(checked)+' KST':'')+(data.cached?' · 오늘의 저장 예보 사용':'')+'</small>';
+  $('tide_'+zone).innerHTML=data.rows.map(r=>'<tr'+(r===next?' class="tide-next"':'')+'><td>'+escapeHTML(r.type)+'</td><td>'+r.time.slice(8,10)+':'+r.time.slice(10,12)+'</td><td>'+r.height.toFixed(0)+' cm</td><td>'+(r===next?'다음':r.time<kst()?'지난 시각':'예정')+'</td></tr>').join('');
+}
+function updateAI(zone) {
+  const state=states[zone],now=Date.now();
+  const recent=(time,hours)=>{const age=now-parseStamp(time);return Number.isFinite(age)&&age>=-60000&&age<=hours*3600000;};
+  const water=state?.water&&!state.water.demo&&!state.water.stale&&recent(state.water.rows.at(-1)?.time,1);
+  const weather=state?.weather&&!state.weather.demo&&recent(state.weather.time,2);
+  const tide=state?.tide&&!state.tide.demo&&state.tide.day===kst().slice(0,8)&&state.tide.rows.length;
+  const sources=[water&&'수위',weather&&'날씨',tide&&'인천 조석'].filter(Boolean);
+  const ready=navigator.onLine&&config.mode==='live'&&!!config.gemini&&sources.length>0;
+  $('btn_ai_'+zone).disabled=!ready||!!state?.aiBusy;
+  $('btn_ai_'+zone).title=ready?'연결된 공식 자료로 Gemini 조언을 요청합니다':'최신 공식 자료 연결 후 조언을 조회합니다';
+  const used=state?.adviceSources||sources;text('ai_basis_'+zone,used.length?(state?.adviceSources?'최근 조언에 사용: ':'사용할 자료: ')+used.join(' · ')+(used.includes('수위')?'':' · 수위 미연결, 수위 판단 제외'):'최신 수위·날씨 또는 오늘 조석 예보를 기다리는 중입니다.');
+  return ready;
+}
+function freshWater(data) {
+ const age=Date.now()-parseStamp(data?.rows?.at(-1)?.time);return !!data&&!data.demo&&!data.stale&&Number.isFinite(age)&&age>=-60000&&age<3600000;
+}
+function waterRequestStatus(zone,state,phase,message){
+ state.waterBusy=phase==='pending';state.waterPhase=phase;state.waterError=phase==='error'?message:null;renderFishingBrief(zone);refreshWaterTimeline();const status=$('water_status_'+zone);if(status){status.textContent=message;status.dataset.phase=phase;}
+ document.querySelectorAll('[data-water-reload="'+zone+'"]').forEach(button=>{button.disabled=state.waterBusy;button.textContent=state.waterBusy?'공식 자료 확인 중…':'공식 자료 다시 조회';button.setAttribute('aria-busy',String(state.waterBusy));});
+}
+function acceptWater(zone,state,data) {
+ data=delayedWaterSnapshot(data);if(!data?.rows?.length)return false;
+ if((data.hours||6)!==(state.waterHours||6))return false;
+ if(state.water&&(state.water.hours||6)===(data.hours||6)&&state.water.rows.at(-1).time>data.rows.at(-1).time)return false;
+ state.waterRangeCache??={};state.waterRangeCache[data.hours||6]=data;state.water=data;rememberWater(zone,data);renderWater(zone,data);updateAI(zone);refreshWaterTimeline();return true;
+}
+async function queryWaterRange(zone,state,current,{force=false}={}){
+ const cfg={...config},hours=state.waterHours||6,previousTime=state.water?.rows?.at(-1)?.time;
+ const retained=()=>state.water?.rows?.length?' · '+(state.water.hours||6)+'시간의 확보된 관측을 계속 표시합니다.':'';
+ waterRequestStatus(zone,state,'pending',hours+'시간 공식 관측 자료를 '+(force?'다시 확인':'조회')+' 중입니다.'+retained());
+ for(let attempt=0;attempt<3;attempt++){
+  if(!current())return;
+  if(!navigator.onLine){waterRequestStatus(zone,state,'error','오프라인입니다. 인터넷에 연결한 후 공식 자료를 다시 조회해 주세요.'+retained());return;}
+  try{
+   const data=await waterData(zone,cfg,hours,force);if(!current())return;
+   if(!acceptWater(zone,state,data)&&!state.water?.rows?.length)throw new Error('유효한 수위 관측 자료가 없습니다');
+   seedRiverWater(zone,state,state.water);
+   const shown=state.water,last=shown.rows.at(-1),checked=data.checkedAt||data.receivedAt,checkedLabel=checked?' · 확인 '+new Date(checked).toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour12:false})+' KST':'';
+   if(data.connectionWarning){waterRequestStatus(zone,state,'error','공식 자료 재확인에 실패했습니다. '+data.connectionWarning+retained()+checkedLabel);return;}
+   const unchanged=last.time===previousTime;
+   waterRequestStatus(zone,state,'success',hours+'시간 '+(data.cached?'저장된 공식 자료 표시':'공식 자료 확인 완료')+checkedLabel+' · 최신 관측 '+stamp(last.time)+(unchanged?' · 최근 수신된 관측 시각이 같아 값을 유지합니다.':'')+(data.historyUnavailable?' · 기간 이력 응답 지연: 확보된 최신 관측만 표시합니다.':''));return;
+  }catch(e){
+   if(!current())return;
+   const retry=attempt<2&&!/로그인|인증|HRFCO (900|940|941|942|943|944)/.test(e.message||'');
+   if(state.water?.rows?.length){renderWater(zone,{...state.water,cached:true,stale:!freshWater(state.water)});document.querySelector('#'+zone+' .api-status').textContent='조회 지연 · 확보된 관측 유지';}
+   else{state.water=null;renderWater(zone,null,e);document.querySelector('#'+zone+' .api-status').textContent=retry?'수위 자동 재조회 '+(attempt+1)+'/2':'수위 조회 실패';}
+   waterRequestStatus(zone,state,retry?'pending':'error',hours+'시간 자료 '+(retry?'응답 지연 · 자동 재시도 '+(attempt+1)+'/2':'조회 실패')+' · '+reason(e)+retained()+(retry?'':' · 공식 자료 다시 조회 버튼으로 재시도할 수 있습니다.'));
+   if(!retry)return;await new Promise(resolve=>setTimeout(resolve,(attempt+1)*2000));
+  }
+ }
+}
+async function loadZoneData(zone,force=false) {
+ if(pending[zone]===generation&&!force)return;
+ const gen=generation,cfg={...config},token={},old=states[zone];pending[zone]=gen;
+ const rangeCache={...(old?.waterRangeCache||{})};if(old?.water?.rows?.length)rangeCache[old.water.hours||6]=old.water;
+ const selected=rangeCache[waterHours[zone]||6]||(!old?.water?restoreWater(zone):null);const state={loaded:0,water:selected?.rows?.length?selected:old?.water?.rows?.length?old.water:null,waterRangeCache:rangeCache,waterHours:waterHours[zone]||6,waterRequest:{},river:old?.river||null,riverRequest:{},weather:old?.weather||null,tide:old?.tide||null,token};states[zone]=state;
+ text('ai_result_'+zone,'연결된 공식 자료로 Gemini 조언을 받을 수 있습니다. 수위 조회가 늦어도 날씨·인천 조석으로 조회합니다.');updateAI(zone);
+ renderTide(zone,state.tide,state.tide?undefined:new Error('인천 조석 예보 조회 중…'));renderWeather(zone,state.weather,state.weather?undefined:new Error('날씨·예보 조회 중…'));
+ if(state.water){seedRiverWater(zone,state,state.water);renderWater(zone,state.water);document.querySelector('#'+zone+' .api-status').textContent='최근 관측 유지 · 새로 조회 중';}
+ else{renderWater(zone,null,new Error('수위 자동 연결 중…'));text('chart_'+zone,'관측 수위 조회 중…');}
+ const current=()=>gen===generation&&states[zone]?.token===token;
+ const request=state.waterRequest;const waterTask=()=>queryWaterRange(zone,state,()=>current()&&state.waterRequest===request,{force});
+ state.waterTask=waterTask();const riverTask=state.waterTask.then(()=>current()?queryRiver(zone,state,current,{force,mode:'quick'}):undefined);state.riverTask=riverTask;
+ await Promise.all([
+  state.waterTask,
+  riverTask,
+  weatherData(zone,cfg).then(data=>{if(current()&&(!state.weather||data.time>=state.weather.time)){state.weather=data;renderWeather(zone,data);updateAI(zone);}},e=>{if(current()&&!state.weather)renderWeather(zone,null,e);}),
+  tideData(cfg).then(data=>{if(current()){state.tide=data;renderTide(zone,data);updateAI(zone);}},e=>{if(current()&&!state.tide)renderTide(zone,null,e);})
+ ]);
+ if(current()){state.loaded=Date.now();delete pending[zone];updateAI(zone);}
+}
+function communityHTML(community){
+ if(!community?.reports?.length)return '<div class="community-basis"><h4>공개 조행기 참고</h4><p class="community-note">최근 한강 조과 근거 부족 · 일반 운용 제안입니다.</p></div>';
+ const validURL=value=>{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:null;}catch{return null;}};
+ return '<div class="community-basis"><h4>공개 조행기 참고</h4><p class="community-note">'+escapeHTML('확인일 '+community.checkedAt+' · 최근 조과·인기 통계가 아닌 개인 조행 사례입니다.')+'</p>'+community.reports.map(r=>{const url=validURL(r.url);return '<div class="community-report">'+(url?'<a href="'+escapeHTML(url)+'" target="_blank" rel="noopener noreferrer">'+escapeHTML(r.title)+' ↗</a>':escapeHTML(r.title))+'<small>'+escapeHTML((r.match||'참고 사례')+' · '+r.region+'\n조행 '+(r.fishedAt||'정확일 미상')+' · 게시 '+r.postedAt)+'</small><p>'+escapeHTML(r.rig)+'<br>'+escapeHTML(r.result)+'</p><small>'+escapeHTML(r.limits)+'</small></div>';}).join('')+'</div>';
+}
+function adviceHTML(data){
+ const at=new Date(data.generatedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
+ const basis=['수위: '+(data.waterTime?stamp(data.waterTime):'미연결 · 수위 판단 제외'),'날씨: '+(data.weatherTime?stamp(data.weatherTime):'미연결'),data.tideDay?'인천 조석: '+data.tideDay.slice(0,4)+'. '+data.tideDay.slice(4,6)+'. '+data.tideDay.slice(6,8)+'.':'인천 조석: 미연결'];
+ if(data.waterSummary){const s=data.waterSummary;basis.push('AI 수위 기준: 최근 '+s.hours+'시간 · 관측 '+s.sampleCount+'건'+(Number.isFinite(s.average)?' 평균 '+s.average.toFixed(2)+' m':' · 평균 계산 자료 부족'));}
+ const meta='<p class="advice-meta">'+escapeHTML('Gemini 루어 수업 · 생성 '+at+' KST\n'+basis.join('\n'))+'</p>';
+ const season=data.season?'<p class="advice-season">'+escapeHTML(data.season.date+' · '+data.season.label)+'</p>':'';
+ const summary='<p class="advice-summary">'+escapeHTML(data.summary||'현재 연결된 공식 자료를 참고한 루어 운용 수업입니다.')+'</p>';
+ const limits='<p class="advice-limits">기온은 수온이 아닙니다. 관측소 수위는 현장 수심이 아니며 인천 조석을 현장 물돌이·간조로 고정 환산하지 않습니다. 지그헤드·싱커는 oz 규격을 우선 표시합니다.</p>';
+ if(!Array.isArray(data.species)||data.species.length!==5)return meta+'<p>'+escapeHTML(data.text||'강의 응답을 다시 요청해 주세요.')+'</p>';
+ const fields=[['conditions','오늘 조건 해석'],['lure','먼저 고를 루어'],['technique','캐스팅 · 침강 · 릴링'],['adjustment','반응 없을 때 바꿀 것']];
+ return meta+season+summary+limits+'<div class="lure-lessons">'+data.species.map((s,i)=>'<details class="lure-lesson"'+(i===0?' open':'')+'><summary>'+escapeHTML(s.name)+'<small>루어 · 운용 수업</small></summary><div class="lure-body">'+fields.map(([key,label])=>'<h4>'+label+'</h4><p>'+escapeHTML(s[key]||'설명 없음')+'</p>').join('')+communityHTML(s.community)+'</div></details>').join('')+'</div>';
+}
+async function getAIAdvice(zone){
+ if(!updateAI(zone))return;const state=states[zone];state.aiBusy=true;updateAI(zone);
+ text('ai_result_'+zone,'Gemini가 현재 자료를 참고해 5종의 루어 선택과 운용 수업을 작성하고 있습니다…');
+ try {
+  const data=await serverData('advice',zone,'POST');if(states[zone]!==state)return;
+  state.adviceSources=data.sources;const observations=data.observations||{};if(observations.water)acceptWater(zone,state,observations.water);if(observations.weather&&(!state.weather||observations.weather.time>=state.weather.time)){state.weather=observations.weather;renderWeather(zone,state.weather);}if(observations.tides){state.tide=state.tide?.day===observations.tides.day&&state.tide.nearbyRows?{...observations.tides,nearbyRows:state.tide.nearbyRows,nearbyDays:state.tide.nearbyDays,nearbyIncomplete:state.tide.nearbyIncomplete}:observations.tides;renderTide(zone,state.tide);}
+  $('ai_result_'+zone).innerHTML=adviceHTML(data);
+ }catch(e){if(states[zone]===state)text('ai_result_'+zone,reason(e));}
+ finally{state.aiBusy=false;updateAI(zone);}
+}
+function applySettings() {
+  generation++;stationPromise=null;tideCache=null;
+  for(const zone of Object.keys(zones)) {delete states[zone];delete pending[zone];$(`btn_ai_${zone}`).disabled=true;}
+  text('global-status',config.mode==='demo'?'예시 모드 · 실제 관측값이 아닙니다':'실제 API 모드 · 항목별 연결 상태를 확인하세요');
+  loadZoneData(activeZone);
+}
+document.querySelectorAll('.map-marker').forEach(marker=>{
+  const choose=()=>openTab(null,marker.id.replace('marker_',''));
+  marker.addEventListener('click',choose);marker.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});
+});
+$('refresh').addEventListener('click',async()=>{const button=$('refresh'),label=button.textContent,zone=activeZone;button.disabled=true;button.textContent='빠른 종합 확인 중…';try{const loading=loadZoneData(zone,true),state=states[zone];loading.catch(e=>{if(activeZone===zone&&states[zone]===state)text('global-status',reason(e));});await(state?.riverTask||loading);}finally{button.disabled=false;button.textContent=label;} });
+function refreshCurrent(){syncAllRiverMotion();refreshWaterTimeline();if(document.hidden||!navigator.onLine)return;updateAI(activeZone);const state=states[activeZone];if(state&&state.loaded&&(Date.now()-state.loaded>=600000||state.tide&&state.tide.day!==kst().slice(0,8)))loadZoneData(activeZone);}
+setInterval(refreshCurrent,60000);document.addEventListener('visibilitychange',refreshCurrent);window.addEventListener('focus',refreshCurrent);
+async function changeWaterRange(zone,hours,force=false){
+ if(![6,24,72].includes(hours))return;waterHours[zone]=hours;const state=states[zone];if(!state){await loadZoneData(zone,force);return;}
+ if(state.water?.rows?.length){state.waterRangeCache??={};state.waterRangeCache[state.water.hours||6]=state.water;}
+ state.waterHours=hours;state.waterRequest={};state.waterSelectedTime=null;state.waterTableCount=12;
+ const saved=state.waterRangeCache?.[hours];if(saved?.rows?.length)state.water=saved;
+ renderWater(zone,state.water,state.water?undefined:new Error(hours+'시간 수위 조회 중…'));updateAI(zone);const token=state.waterRequest;
+ await queryWaterRange(zone,state,()=>states[zone]===state&&state.waterRequest===token,{force});
+}
+document.querySelectorAll('[data-water-hours]').forEach(b=>b.addEventListener('click',()=>changeWaterRange(b.dataset.waterZone,Number(b.dataset.waterHours))));
+document.querySelectorAll('[data-water-reload]').forEach(b=>b.addEventListener('click',()=>{const zone=b.dataset.waterReload,state=states[zone];return changeWaterRange(zone,waterHours[zone]||6,true).then(()=>state&&states[zone]===state?queryRiver(zone,state,()=>states[zone]===state,{force:true}):undefined);}));
+document.querySelectorAll('[data-river-reload]').forEach(b=>b.addEventListener('click',()=>{const zone=b.dataset.riverReload,state=states[zone];if(!state)return loadZoneData(zone,true);return changeWaterRange(zone,waterHours[zone]||6,true).then(()=>states[zone]===state?queryRiver(zone,state,()=>states[zone]===state,{force:true}):undefined);}));
+document.querySelectorAll('[data-river-history]').forEach(b=>b.addEventListener('click',()=>{const zone=b.dataset.riverHistory,state=states[zone];if(!state)return;return queryRiver(zone,state,()=>states[zone]===state,{force:true,mode:'history'});}));
+document.querySelectorAll('[data-river-pause]').forEach(b=>b.addEventListener('click',()=>{const zone=b.dataset.riverPause;riverPaused[zone]=!riverPaused[zone];syncRiverMotion(zone);renderFishingBrief(zone);}));
+riverMotionPreference?.addEventListener?.('change',syncAllRiverMotion);
+document.querySelectorAll('[data-water-slider]').forEach(el=>el.addEventListener('input',()=>selectWaterPoint(el.dataset.waterSlider,el.value)));
+for(const zone of Object.keys(zones))$('chart_'+zone).addEventListener('click',e=>{const rows=states[zone]?.water?.rows,svg=$('chart_'+zone).querySelector('svg');if(!rows?.length||!svg)return;const box=svg.getBoundingClientRect(),ratio=Math.max(0,Math.min(1,((e.clientX-box.left)*800/box.width-55)/690)),target=parseStamp(rows[0].time)+ratio*(parseStamp(rows.at(-1).time)-parseStamp(rows[0].time));let i=0;for(let j=1;j<rows.length;j++)if(Math.abs(parseStamp(rows[j].time)-target)<Math.abs(parseStamp(rows[i].time)-target))i=j;selectWaterPoint(zone,i);});
+document.querySelectorAll('[data-water-more]').forEach(b=>b.addEventListener('click',()=>{const z=b.dataset.waterMore;states[z].waterTableCount=(states[z].waterTableCount||12)+12;renderWaterTable(z);}));
+document.querySelectorAll('[data-water-csv]').forEach(b=>b.addEventListener('click',()=>{const z=b.dataset.waterCsv,d=states[z]?.water;if(!d?.rows?.length)return;const csv=[['관측소','관측소코드','관측시각(KST)','수위(m)','직전관측대비(cm)'],...d.rows.map((r,i)=>[d.station,d.stationCode||'',r.time.slice(0,4)+'-'+r.time.slice(4,6)+'-'+r.time.slice(6,8)+' '+r.time.slice(8,10)+':'+r.time.slice(10,12),r.value.toFixed(2),i?Math.round((r.value-d.rows[i-1].value)*100):''])].map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'})),a=document.createElement('a');a.href=url;a.download='hangang-water-'+(d.stationCode||z)+'-'+(d.hours||6)+'h-'+kst().slice(0,8)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}));
+
+
+document.querySelectorAll('[data-water-timeline]').forEach(button=>{button.addEventListener('click',()=>openWaterTimeline(button.dataset.waterTimeline));button.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openWaterTimeline(button.dataset.waterTimeline);}});});
+$('water-timeline-close').addEventListener('click',()=>$('water-timeline-dialog').close());
+$('water-timeline-reload').addEventListener('click',reloadWaterTimeline);
+$('water-timeline-dialog').addEventListener('click',event=>{if(event.target!==$('water-timeline-dialog'))return;const rect=event.target.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)event.target.close();});
+
+let preferred='ttukseom';try{preferred=localStorage.getItem('hangang-zone')||preferred;}catch{}openTab(null,zones[preferred]?preferred:'ttukseom');
+
+
+
+let installEvent=null;const standalone=window.matchMedia('(display-mode: standalone)');
+function installed(){return standalone.matches||navigator.standalone===true;}
+function installStatus(){text('install-open',installed()?'앱 사용 중':'＋ 앱 설치');$('install-native').hidden=!installEvent||installed();}
+const ua=navigator.userAgent;const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);const device=ios?'ios':/Android/.test(ua)?'android':'other';
+const guides={android:'<ol><li>Chrome에서 이 주소를 엽니다.</li><li>메뉴 ⋮ → 앱 설치 또는 홈 화면에 추가를 누릅니다.</li><li>홈 화면의 한강 낚시 아이콘으로 실행합니다.</li></ol>',ios:'<ol><li>Safari에서 이 주소를 엽니다.</li><li>공유 → 홈 화면에 추가를 누릅니다.</li><li>웹 앱으로 열기가 보이면 켜고 추가합니다.</li></ol>',other:'<ol><li>Chrome·Edge의 메뉴에서 앱 설치를 선택합니다.</li><li>휴대폰에서도 같은 주소를 열어 홈 화면에 추가할 수 있습니다.</li></ol>'};
+function showGuide(d){$('install-guide').innerHTML=guides[d];document.querySelectorAll('[data-device]').forEach(b=>{const selected=b.dataset.device===d;b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));});}
+showGuide(device);installStatus();
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;installStatus();});window.addEventListener('appinstalled',()=>{installEvent=null;installStatus();text('install-notice','홈 화면에 설치했습니다.');});standalone.addEventListener?.('change',installStatus);
+$('install-open').addEventListener('click',()=>{$('install-dialog').showModal();text('install-notice',installed()?'지금 홈 화면 앱으로 사용하고 있습니다.':'');});$('install-close').addEventListener('click',()=>$('install-dialog').close());document.querySelectorAll('[data-device]').forEach(b=>b.addEventListener('click',()=>showGuide(b.dataset.device)));
+$('install-native').addEventListener('click',async()=>{const event=installEvent;if(!event)return;installEvent=null;installStatus();try{await event.prompt();const choice=await event.userChoice;text('install-notice',choice.outcome==='accepted'?'홈 화면에 추가했습니다.':'브라우저 메뉴에서 나중에 설치할 수 있습니다.');}catch{text('install-notice','위 안내에 따라 브라우저 메뉴에서 설치해 주세요.');}});
+$('install-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.origin+'/');text('install-notice','앱 주소를 복사했습니다.');}catch{text('install-notice','주소창의 주소를 복사해 주세요.');}});
+document.querySelectorAll('.app-nav button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.app-nav button').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});const section=b.dataset.section;const target=section==='map'?document.querySelector('.map-card'):section==='chart'?document.querySelector('#'+activeZone+' .card'):section==='weather'?$('weather_details_'+activeZone):section==='tide'?$('tide_details_'+activeZone):$('ai_result_'+activeZone).closest('.ai-card');if(section==='weather'||section==='tide')target.open=true;target?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}));
+function connection(){syncAllRiverMotion();const off=!navigator.onLine;$('offline-banner').hidden=!off;text('global-status',off?'오프라인 · 표시 자료 갱신 중단':'수위 15분 지연 기준 · 10분마다 새로 확인');if(off){document.querySelectorAll('.api-status').forEach(e=>{e.classList.remove('live');e.textContent='오프라인';});}else{loadZoneData(activeZone,true);}}
+window.addEventListener('offline',connection);window.addEventListener('online',connection);if(!navigator.onLine)connection();
+if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).catch(()=>{});
+
+</script>
+</body>
+</html>
