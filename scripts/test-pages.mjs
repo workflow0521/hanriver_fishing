@@ -4,6 +4,7 @@ import test from 'node:test';
 import {kst} from '../src/data.mjs';
 import {selectPublicData} from '../src/public-data.mjs';
 import {publicTableRows} from '../src/hrfco-public.mjs';
+import {validateHydrologyHandoff} from '../src/hydrology-handoff.mjs';
 
 const now=Date.parse('2026-11-11T09:01:00+09:00'),minute=60000;
 const stamp=ago=>kst(new Date(now-ago*minute));
@@ -60,4 +61,17 @@ test('the public station table parser verifies the gauge, units and time window'
  ],spec,from,to);
  assert.deepEqual(observed,[{time:'202611110810',value:1.03},{time:'202611110840',value:0.95}]);
  assert.throws(()=>publicTableRows([{...row('2026-11-11 08:40',1),wlobscd:'1018680'}],spec,from,to),/관측소/);
+});
+
+test('manual handoff keeps only current verified station intervals without renewing the observation time',()=>{
+ const checkedAt=new Date(now).toISOString();
+ const entry={source:'한강홍수통제소 공개 수문자료',stationCode:'1018662',unit:'m',checkedAt,rows};
+ const handoff={schema:1,collectedAt:checkedAt,water:{[zone]:entry,banpo:entry}};
+ const validated=validateHydrologyHandoff(handoff,now);
+ assert.deepEqual(Object.keys(validated.water),[zone]);
+ assert.equal(validated.water[zone].rows.at(-1).time,stamp(21));
+ assert.equal(validated.water[zone].checkedAt,checkedAt);
+ assert.deepEqual(validateHydrologyHandoff(handoff,now+41*minute).water,{});
+ const later={...handoff,water:{[zone]:{...entry,rows:[{time:stamp(61),value:1.2}]}}};
+ assert.deepEqual(validateHydrologyHandoff(later,now).water,{});
 });

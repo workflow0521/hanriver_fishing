@@ -2,6 +2,8 @@ name: Refresh data and publish Pages
 on:
   push:
     branches: [main]
+  repository_dispatch:
+    types: [hydrology-refresh]
   workflow_dispatch:
     inputs:
       publish_advice:

@@ -1,7 +1,8 @@
-import {mkdir, writeFile} from 'node:fs/promises';
+import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import {zones, parseStamp, waterData, weatherData, tideWindowData} from '../src/data.mjs';
 import {publicRiverFactor} from '../src/river-data.mjs';
 import {publicHydrology} from '../src/hrfco-public.mjs';
+import {validateHydrologyHandoff} from '../src/hydrology-handoff.mjs';
 import {snapshotWater, selectPublicData} from '../src/public-data.mjs';
 import {generateAdvice} from '../src/advice.mjs';
 
@@ -33,6 +34,9 @@ function warning(error){
 }
 
 const previous=repo==='workflow0521/hanriver_fishing'?await readPrevious():{};
+const input=process.env.GITHUB_EVENT_NAME==='repository_dispatch'&&process.env.GITHUB_EVENT_PATH
+ ? JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH,'utf8')).client_payload : null;
+const handoff=validateHydrologyHandoff(input);
 const statuses={};
 async function attempt(name,key,request){
  if(!key){statuses[name]='연결 설정 대기';return null;}
@@ -63,17 +67,22 @@ async function hydrology(name,api,publicTable){
  return value;
 }
 
+function supplied(name,source){
+ if(source)statuses[name]='공개 관측 전달 확보';
+ return source;
+}
+
 async function collectWater(zone){
  const prior=snapshotWater(previous.water?.[zone],72,now);
  const opts={delayMinutes:15,timeoutMs:6000,retries:0};
  const name='water-'+zone;
  const hours=prior?6:72;
- const fresh=await hydrology(name,()=>waterData(zone,config,{...opts,hours}),()=>publicHydrology('water',zone,hours));
+ const fresh=supplied(name,handoff.water[zone])||await hydrology(name,()=>waterData(zone,config,{...opts,hours}),()=>publicHydrology('water',zone,hours));
  if(!fresh&&!prior)return null;
  const byTime=new Map();
  for(const row of [...(prior?.rows||[]),...(fresh?.rows||[])])byTime.set(row.time,row);
  const newest=fresh&&(!prior||fresh.rows.at(-1).time>=prior.rows.at(-1).time);
- const basis=newest?{...fresh,checkedAt:checked()}:prior;
+ const basis=newest?{...fresh,checkedAt:fresh.checkedAt||checked()}:prior;
  return snapshotWater({...basis,rows:[...byTime.values()],...(!newest?{cached:true,connectionWarning:'갱신 지연 · 마지막 실제 관측을 유지합니다.'}:{})},72,Date.now());
 }
 
@@ -91,8 +100,8 @@ const weatherTask=Promise.all(Object.keys(zones).map(async zone=>{
 }));
 const tideTask=attempt('tides',config.tide,()=>tideWindowData(config));
 await Promise.all([waterTask,weatherTask]);
-const dam=await hydrology('dam',()=>publicRiverFactor('dam',config,6),()=>publicHydrology('dam','',6));
-const rain=await hydrology('rain',()=>publicRiverFactor('rain',config,24),()=>publicHydrology('rain','',24));
+const dam=supplied('dam',handoff.dam)||await hydrology('dam',()=>publicRiverFactor('dam',config,6),()=>publicHydrology('dam','',6));
+const rain=supplied('rain',handoff.rain)||await hydrology('rain',()=>publicRiverFactor('rain',config,24),()=>publicHydrology('rain','',24));
 const tides=await tideTask;
 const payload={
  schema:1,collectedAt:checked(),water,weather,

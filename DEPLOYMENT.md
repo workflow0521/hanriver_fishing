@@ -16,4 +16,6 @@ Settings → Secrets and variables → Actions의 저장소 비밀:
 
 홍수통제소 API 연결이 지연되면 같은 기관의 [공개 수문자료 표](https://www.hrfco.go.kr/sumun/waterlevelList.do)에서 동일 관측소·단위의 10분 자료를 조회합니다.
 
+GitHub 실행 환경에서 두 경로 모두 연결되지 않는 경우, 공식 공개 관측표에 접근 가능한 컴퓨터에서 `node scripts/refresh-hydrology.mjs`를 실행하면 GitHub Pages로 최근 수위·방류·강수를 전달합니다. 쓰기 가능한 GitHub 계정 로그인이 필요합니다. 먼저 `--check`로 관측 시각과 건수를 확인할 수 있습니다. 최신 수위가 하나도 없으면 배포를 요청하지 않습니다. 이 명령은 한 번 갱신하며 별도의 자동 실행을 설치하지 않습니다.
+
 GitHub Pages에는 요청을 처리하는 자체 서버가 없습니다. 방문자의 새로고침은 마지막 게시본을 다시 조회합니다. 실시간 생성형 AI 요청은 실행하지 않습니다. 예약 실행이 비활성화된 경우 Actions 화면에서 다시 활성화하고 수동 실행하세요.
