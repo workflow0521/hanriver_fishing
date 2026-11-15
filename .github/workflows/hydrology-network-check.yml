@@ -1,0 +1,20 @@
+name: Check official hydrology access
+on:
+  push:
+    branches: [diagnostics/hydrology-network]
+permissions:
+  contents: read
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-latest, ubuntu-slim, windows-latest]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/probe-hydrology.mjs
